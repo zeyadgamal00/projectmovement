@@ -388,11 +388,11 @@ public:
 				if (batrot >= 0) end = 0;
 			}
 		}
-		else if (batrot < 0) batrot += 3*slowmo;
-		
+		else if (batrot < 0) batrot += 3 * slowmo;
 	}
 	void shoot() {
 		if ((posx-p1.posx) * (posx - p1.posx) + (posy-p1.posy)* (posy - p1.posy) <= 250000) {
+			if(batrot>=0)
 			attacking = 1; 
 			for (int i = 0; i < tempbat.size(); i++) {
 				tempbat[i].x = oldbat[i].x + posx;
@@ -407,7 +407,7 @@ public:
 					p1.gameover = 1;
 			}
 		}
-		else attacking = 0;
+		else if(end) attacking = 0;
 
 	}
 };
