@@ -134,9 +134,6 @@
   <ItemGroup>
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <Image Include="C:\Users\Dell\Downloads\texattempt\Game\1.png" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

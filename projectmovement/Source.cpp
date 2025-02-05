@@ -187,29 +187,30 @@ void game() {
 	for (auto i : bullet_buffer) {
 		i.move();
 		i.draw();
-		if (i.type == 1) {
-			if (p1.collision(i))
-				p1.gameover = 1;
-			continue;
-		}
-		if (i.type == 0 && enemy1.alive) {
-			if (enemy1.collision(i)) {
-				enemy1.alive = false;
-				updatetitle();
+		if (!i.unneeded(p1)) {
+			next.push_back(i);
+
+			if (i.type == 1) {
+				if (p1.collision(i))
+					p1.gameover = 1;
 				continue;
 			}
-		}
-		for (int j = 0; j < enemy3.size(); j++) {
-			if (i.type == 0 && enemy3[j].alive) {
-				if (enemy3[j].collision(i)) {
-					enemy3[j].alive = false;
+			if (i.type == 0 && enemy1.alive) {
+				if (enemy1.collision(i)) {
+					enemy1.alive = false;
 					updatetitle();
 					continue;
 				}
 			}
-		}
-		if (!i.unneeded(p1)) {
-			next.push_back(i);
+			for (int j = 0; j < enemy3.size(); j++) {
+				if (i.type == 0 && enemy3[j].alive) {
+					if (enemy3[j].collision(i)) {
+						enemy3[j].alive = false;
+						updatetitle();
+						continue;
+					}
+				}
+			}
 		}
 	}
 	bullet_buffer.clear();
@@ -222,15 +223,17 @@ void game() {
 		enemy1.draw();
 		if (enemy1.alive) {
 			enemy1.move();
-			enemy1.shoot();
+			//enemy1.shoot();
 		}
 		for (int i = 0; i < enemy3.size(); i++) {
 			enemy3[i].draw();
+			enemy3[i].shoot();
+			enemy3[i].drawbat();
 			if (enemy3[i].alive) {
 				enemy3[i].move();
-				if (p1.collision(enemy3[i])) {
+				/*if (p1.collision(enemy3[i])) {
 					p1.gameover = 1;
-				}
+				}*/
 
 			}
 		}

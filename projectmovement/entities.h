@@ -87,7 +87,6 @@ public:
 		for (int i = 0; i < temp.size(); i++) {
 			temp[i].x = oldp[i].x + posx;
 			temp[i].y = oldp[i].y+posy;
-			rotate_point(temp[i].x, temp[i].y);
 		}
 		hitboxes[0]=(shape(temp));
 	}
@@ -142,7 +141,9 @@ public:
 		if (keys[4]) {
 			slowmo = 0.1;
 		}
-		else { slowmo += (1 - slowmo) * 0.05; cout << slowmo<<endl; }
+		else { slowmo += (1 - slowmo) * 0.05; 
+		//cout << slowmo<<endl; 
+		}
 		if (x != 0 || y != 0) {
 			if (velo <= maxvelo)
 				velo += accel;
@@ -212,8 +213,9 @@ public:
 				bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, 0));
 				bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, 0));
 				bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, 0));
+				bullet_buffer.push_back(bullet(posx, posy, rot, 0));
 			}
-			bullet_buffer.push_back(bullet(posx, posy, rot, 0));
+
 			cooldown = base_cooldown;
 		}
 	}
@@ -303,6 +305,7 @@ public:
 			rot = rot * 180 / PI;
 			bullet_buffer.push_back(bullet(posx, posy, rot, 1));
 			cooldown = base_cooldown;
+			cout << "shooting" << endl;
 		}
 	}
 	void move() {
@@ -331,9 +334,13 @@ enemy_pewpew enemy1(-2000, 1000, 0);
 
 class enemy_whooshwhoosh :public enemy {
 public:
+	bool attacking = 0,end=0;
 	float velo = 10;
+	float batrot = 0;
 	vector<vect> oldp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
 	vector<vect> temp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
+	vector<vect> oldbat = { {-25,0},{-25,250},{25,250},{25,250} };
+	vector<vect> tempbat = { {-25,0},{-25,250},{25,250},{25,250} };
 	enemy_whooshwhoosh(float posx = 0, float posy = 0, float rot = 0) : enemy(posx, posy, rot, 0) {}
 	void move() {
 		if (alive) {
@@ -346,9 +353,47 @@ public:
 				temp[i].y = oldp[i].y + posy;
 				rotate_point(temp[i].x, temp[i].y);
 			}
+			for (int i = 0; i < tempbat.size(); i++) {
+				tempbat[i].x = oldbat[i].x + posx;
+				tempbat[i].y = oldbat[i].y + posy;
+				if(attacking)
+				::rotate_point(tempbat[i].x, tempbat[i].y,batrot);
+			}
 			hitboxes.clear();
 			hitboxes.push_back(shape(temp));
 		}
+	}
+	void drawbat() {
+		glPushMatrix();
+		glTranslatef(posx, posy, 0);
+		glRotatef(rot, 0, 0, 1.0f);
+		glRotatef(batrot,0, 0, 1.0f);
+		glTranslatef(0,75,0);
+		glColor3ub(0, 0, 0);
+		glBegin(GL_QUADS);
+		glVertex2d(-25, 0);
+		glVertex2d(-25, 250);
+		glVertex2d(25, 250);
+		glVertex2d(25, 0);
+		glEnd();
+		glPopMatrix();
+		if (attacking) {
+			if (!end) {
+				batrot -= 5;
+				if (batrot <= -180) end = 1;
+			}
+			if (end) {
+				batrot += 5;
+				if (batrot >= 0) end = 0;
+			}
+		}
+		else if (batrot < 0) batrot += 3;
+	}
+	void shoot() {
+		if ((posx-p1.posx) * (posx - p1.posx) + (posy-p1.posy)* (posy - p1.posy) <= 250000) {
+			attacking = 1;
+		}
+		else attacking = 0;
 	}
 };
 enemy_whooshwhoosh enemy2(1500, 1500), enemy4(-1500, 1500);
