@@ -10,12 +10,13 @@ extern float mousey, mousex; extern int score;
 extern bool keys[5];
 float slowmo = 1;
 
-int rotate_point(float& xout, float& yout, float angle) {
-	float rad = angle * PI / 180;
-	float x = xout, y = yout;
-	xout = x * cos(rad) - y * sin(rad);
-	yout = x * sin(rad) + y * cos(rad);
-	return 0;
+void drawfromhitbox(vector<vect> vec) {
+	glColor3ub(0, 0, 0);
+	glBegin(GL_POLYGON);
+	for (auto i : vec) {
+		glVertex2f(i.x, i.y);
+	}
+	glEnd();
 }
 class entity {
 public:
@@ -32,12 +33,17 @@ public:
 		}
 		return false;
 	}
-	int rotate_point(float& xout, float& yout) {
+	void rotate_point(float& xout, float& yout) {
 		float rad = rot * PI / 180;
 		float x = xout, y = yout;
 		xout = (x - posx) * cos(rad) - (y - posy) * sin(rad) + posx;
 		yout = (x - posx) * sin(rad) + (y - posy) * cos(rad) + posy;
-		return 0;
+	}
+	void rotate_point(float& xout, float& yout, float angle) {
+		float rad = angle * PI / 180;
+		float x = xout, y = yout;
+		xout = (x - posx) * cos(rad) - (y - posy) * sin(rad) + posx;
+		yout = (x - posx) * sin(rad) + (y - posy) * cos(rad) + posy;
 	}
 
 };
@@ -57,7 +63,7 @@ public:
 			rotate_point(temp[i].x, temp[i].y);
 		}
 		hitboxes.push_back(shape(temp));
-	}
+		}
 	void draw() {
 		glPushMatrix();
 		glTranslatef(posx, posy, 0);
@@ -100,9 +106,10 @@ public:
 	bool gameover = 0, jumpbool = 0, burst_shot = false, spread_shot = false;
 	int base_cooldown = 50, weapon = 3;
 	float cooldown = 0;
+	vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
+	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
-		vector<vect> shapes = { vect(-100, 100), vect(100,100), vect(100,-100), vect(-100,-100) };
-		hitboxes.push_back(shape(shapes));
+		hitboxes.push_back(shape(oldp));
 	}
 
 	void draw() {
@@ -170,10 +177,9 @@ public:
 		rot = rot * 180 / PI;
 
 
-		vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 		for (int i = 0; i < temp.size(); i++) {
-			temp[i].x += posx;
-			temp[i].y += posy;
+			temp[i].x =  oldp[i].x+posx;
+			temp[i].y = oldp[i].y + posy;
 			rotate_point(temp[i].x, temp[i].y);
 		}
 		hitboxes.clear();
@@ -339,8 +345,8 @@ public:
 	float batrot = 0;
 	vector<vect> oldp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
 	vector<vect> temp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
-	vector<vect> oldbat = { {-25,0},{-25,250},{25,250},{25,250} };
-	vector<vect> tempbat = { {-25,0},{-25,250},{25,250},{25,250} };
+	vector<vect> oldbat = { {-25,0},{-25,250},{25,250},{25,0} };
+	vector<vect> tempbat = { {-25,0},{-25,250},{25,250},{25,0} };
 	enemy_whooshwhoosh(float posx = 0, float posy = 0, float rot = 0) : enemy(posx, posy, rot, 0) {}
 	void move() {
 		if (alive) {
@@ -353,23 +359,18 @@ public:
 				temp[i].y = oldp[i].y + posy;
 				rotate_point(temp[i].x, temp[i].y);
 			}
-			for (int i = 0; i < tempbat.size(); i++) {
-				tempbat[i].x = oldbat[i].x + posx;
-				tempbat[i].y = oldbat[i].y + posy;
-				if(attacking)
-				::rotate_point(tempbat[i].x, tempbat[i].y,batrot);
-			}
+			
 			hitboxes.clear();
 			hitboxes.push_back(shape(temp));
 		}
+		
 	}
 	void drawbat() {
 		glPushMatrix();
 		glTranslatef(posx, posy, 0);
-		glRotatef(rot, 0, 0, 1.0f);
-		glRotatef(batrot,0, 0, 1.0f);
+		glRotatef(rot+batrot,0, 0, 1.0f);
 		glTranslatef(0,75,0);
-		glColor3ub(0, 0, 0);
+		glColor3ub(124, 40, 20);
 		glBegin(GL_QUADS);
 		glVertex2d(-25, 0);
 		glVertex2d(-25, 250);
@@ -379,21 +380,35 @@ public:
 		glPopMatrix();
 		if (attacking) {
 			if (!end) {
-				batrot -= 5;
+				batrot -= 5*slowmo;
 				if (batrot <= -180) end = 1;
 			}
 			if (end) {
-				batrot += 5;
+				batrot += 5*slowmo;
 				if (batrot >= 0) end = 0;
 			}
 		}
-		else if (batrot < 0) batrot += 3;
+		else if (batrot < 0) batrot += 3*slowmo;
+		
 	}
 	void shoot() {
 		if ((posx-p1.posx) * (posx - p1.posx) + (posy-p1.posy)* (posy - p1.posy) <= 250000) {
-			attacking = 1;
+			attacking = 1; 
+			for (int i = 0; i < tempbat.size(); i++) {
+				tempbat[i].x = oldbat[i].x + posx;
+				tempbat[i].y = oldbat[i].y + posy;
+				tempbat[i].y += 75;
+				if (attacking)
+					rotate_point(tempbat[i].x, tempbat[i].y, rot + batrot);
+			}
+			shape bat(tempbat);
+			for (auto i : p1.hitboxes) {
+				if (i.check(bat))
+					p1.gameover = 1;
+			}
 		}
 		else attacking = 0;
+
 	}
 };
 enemy_whooshwhoosh enemy2(1500, 1500), enemy4(-1500, 1500);
