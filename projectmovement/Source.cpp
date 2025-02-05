@@ -101,58 +101,7 @@ void updatetitle() {
 	str.append(buffer);
 	glutSetWindowTitle(str.c_str());
 }
-void collision_check(vector<bullet>& bullet_buffer) {
-	vector<bullet> next;
-	for (auto i : bullet_buffer) {
-		i.move();
-		i.draw();
-		if (i.type == 1) {
-			if (p1.collision(i))
-				p1.gameover = 1;
-			continue;
-		}
-		if (i.type == 0 && enemy1.alive) {
-			if (enemy1.collision(i)) {
-				enemy1.alive = false;
-				updatetitle();
-				continue;
-			}
-		}
-		for (int j = 0; j < enemy3.size(); j++) {
-			if (i.type == 0 && enemy3[j].alive) {
-				if (enemy3[j].collision(i)) {
-					enemy3[j].alive = false;
-					updatetitle();
-					continue;
-				}
-			}
-		}
-		if (!i.unneeded(p1)) {
-			next.push_back(i);
-		}
-	}
-	bullet_buffer.clear();
-	bullet_buffer = next;
-}
-void threadedcollisions() {
-	const unsigned int number = thread::hardware_concurrency();
-	const unsigned int chunksize = bullet_buffer.size() / number;
-	vector<thread> threads;
-	std::vector<std::vector<bullet>> result_buffers(number);
 
-	for (int t = 0; t < number; t++) {
-		unsigned int start = t * chunksize;
-		unsigned int end = (t == number - 1) ? bullet_buffer.size() : (t + 1) * chunksize;
-		threads.push_back(thread([start, end]() {
-			vector<bullet> subvector(bullet_buffer.begin() + start, bullet_buffer.begin() + end);
-		collision_check(subvector);
-			
-			}));
-	}
-	for (auto& t : threads) {
-		t.join();
-	}
-}
 void game() {
 	if (p1.gameover) {
 		glClearColor(0.5, 0, 0, 1);
