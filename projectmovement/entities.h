@@ -99,17 +99,82 @@ public:
 
 };
 vector<bullet> bullet_buffer;
+class weapon {
+public:
+	float cooldown;
+	int basecooldown,type;
+	bool melee=false, burst_shot=false, spread_shot=false,isenemy=false;
+	vector<vect> meleeOriginalHitbox, meleeCurrentHitbox;
+	weapon() : type(0), isenemy(false), melee(0), basecooldown(0), cooldown(0), burst_shot(false), spread_shot(false) {}
+	weapon(int type, bool isenemy) : type(type), isenemy(isenemy) {
+		switch (type)
+		{
+		case 0: //fists
+			melee = 1;
+			basecooldown = 10;
+			if (isenemy) cooldown = basecooldown;
+			else cooldown = 0;
+			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,250},{25,250},{25,0} };
+		break;
+		case 1: //bat
+			melee = 1;
+			basecooldown = 15;
+			if (isenemy) cooldown = basecooldown;
+			else cooldown = 0;
+			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,250},{25,250},{25,0} };
+			break;
+		case 2: //pistol
+			basecooldown = 50;
+			if (isenemy) cooldown = basecooldown;
+			else cooldown = 0;
+			break;
+		case 3: //smg
+			burst_shot = true;
+			basecooldown = 40;
+			if (isenemy) cooldown = basecooldown;
+			else cooldown = 0;
+			break;
+		case 4:
+			spread_shot = true;
+			basecooldown = 75;
+			if (isenemy) cooldown = basecooldown;
+			else cooldown = 0;
+			break;
+		default:
+			break;
+		}
+	}
+	void shoot(float posx,float posy,float rot) {
+		if (!melee) {
+			if (cooldown == 0) {
+				if (spread_shot) {
+					srand(time(0));
+					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
+					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
+					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
+					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
+
+				}
+				bullet_buffer.push_back(bullet(posx, posy, rot, isenemy));
+				cooldown = basecooldown;
+			}
+		}
+		else {
+
+		}
+	}
+};
 class player : public entity
 {
-
 public:
 	bool gameover = 0, jumpbool = 0, burst_shot = false, spread_shot = false;
-	int base_cooldown = 50, weapon = 3;
-	float cooldown = 0;
+	int base_cooldown = 50, wesapon = 3;
+	float cooldown = 0; weapon pweapon;
 	vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
 		hitboxes.push_back(shape(oldp));
+		pweapon = weapon(2, 0);
 	}
 
 	void draw() {
@@ -125,9 +190,9 @@ public:
 		glVertex2f(100, 100);
 		glEnd();
 		glPopMatrix();
-		if (cooldown >= 1)
-			cooldown -= 1 * slowmo;
-		else cooldown = 0;
+		if (pweapon.cooldown >= 1)
+			pweapon.cooldown -= 1 * slowmo;
+		else pweapon.cooldown = 0;
 	}
 	void move() {
 		float x = 0, y = 0, maxvelo = 30;
@@ -188,41 +253,9 @@ public:
 
 	}
 	void shoot() {
-		switch (weapon)
-		{
-		case 0: //fists
-			base_cooldown = 20;
-			burst_shot = false;
-			spread_shot = false;
-			break;
-		case 1: //pistol
-			base_cooldown = 50;
-			burst_shot = false;
-			spread_shot = false;
-			break;
-		case 2: //smg
-			base_cooldown = 10;
-			burst_shot = true;
-			spread_shot = false;
-			break;
-		case 3:
-			base_cooldown = 75;
-			burst_shot = false;
-			spread_shot = true;
-		default:
-			break;
-		}
-		if (left_click && cooldown == 0) {
-			if (spread_shot) {
-				srand(time(0));
-				bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, 0));
-				bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, 0));
-				bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, 0));
-				bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, 0));
-				bullet_buffer.push_back(bullet(posx, posy, rot, 0));
-			}
-
-			cooldown = base_cooldown;
+		
+		if (left_click) {
+			pweapon.shoot(posx,posy,rot);
 		}
 	}
 };
@@ -257,7 +290,12 @@ public:
 	bool type = 0;
 	int frameswhendead = 60;
 	int framesleft = 60;
-	enemy(float posx, float posy, float rot, bool type) :entity(posx, posy, rot), type(type) {}
+	weapon eweapon;
+	vector<vect> oldp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
+	vector<vect> temp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
+	enemy(float posx, float posy, float rot, bool type) :entity(posx, posy, rot), type(type) {
+		eweapon = weapon(4, 1);
+	}
 	int draw() {
 		// alive
 
@@ -296,47 +334,41 @@ public:
 		if (!framesleft) {
 			return 0;
 		}
+		if (eweapon.cooldown >= 1)
+			eweapon.cooldown -= 1 * slowmo;
+		else eweapon.cooldown = 0;
 	}
-	void move(){}
-
-};
-class enemy_pewpew :public enemy {
-	int base_cooldown = 200;
-	float cooldown = base_cooldown;
-public:
-	enemy_pewpew(float posx = 0, float posy = 0, float rot = 0) : enemy(posx, posy, rot, 1) {}
-	void shoot() {
-		if (cooldown == 0) {
-			rot = atan2(p1.posy - posy, p1.posx - posx);
-			rot = rot * 180 / PI;
-			bullet_buffer.push_back(bullet(posx, posy, rot, 1));
-			cooldown = base_cooldown;
-			cout << "shooting" << endl;
-		}
-	}
-	void move() {
+	void move(){
 		rot = atan2(p1.posy - posy, p1.posx - posx);
-		float dist = (p1.posx - posx) * (p1.posx - posx) + (p1.posy - posy) * (p1.posy - posy);
-		dist = sqrt(dist);
-		if (dist > 1200) {
-			posx += 10*slowmo * cos(rot);
-			posy += 10*slowmo * sin(rot);
+		if (!eweapon.melee) {
+			float dist = (p1.posx - posx) * (p1.posx - posx) + (p1.posy - posy) * (p1.posy - posy);
+			dist = sqrt(dist);
+			if (dist > 1200) {
+				posx += 10 * slowmo * cos(rot);
+				posy += 10 * slowmo * sin(rot);
+			}
+			cout << posx <<" "<<posy << endl;
+		}
+		else {
+			posx += velo * cos(rot) * slowmo;
+			posy += velo * sin(rot) * slowmo;
 		}
 		rot = rot * 180 / PI;
-		vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 		for (int i = 0; i < temp.size(); i++) {
-			temp[i].x += posx;
-			temp[i].y += posy;
+			temp[i].x = oldp[i].x + posx;
+			temp[i].y = oldp[i].y + posy;
 			rotate_point(temp[i].x, temp[i].y);
 		}
 		hitboxes.clear();
 		hitboxes.push_back(shape(temp));
-
-		if (cooldown)
-			cooldown--;
 	}
+	void shoot() {
+		eweapon.shoot(posx, posy, rot);
+		cout << "shooting";
+	}
+
 };
-enemy_pewpew enemy1(-2000, 1000, 0);
+enemy enemy1(-2000, 1000, 0,0);
 
 class enemy_whooshwhoosh :public enemy {
 public:

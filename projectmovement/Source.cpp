@@ -166,26 +166,26 @@ void game() {
 	bullet_buffer = next;
 
 		p1.draw();
-		if (p1.collision(enemy2) && enemy2.alive) {
+		/*if (p1.collision(enemy2) && enemy2.alive) {
 			p1.gameover = 1;
-		}
+		}*/
 		enemy1.draw();
 		if (enemy1.alive) {
 			enemy1.move();
-			//enemy1.shoot();
+			enemy1.shoot();
 		}
-		for (int i = 0; i < enemy3.size(); i++) {
-			enemy3[i].draw();
-			enemy3[i].shoot();
-			enemy3[i].drawbat();
-			if (enemy3[i].alive) {
-				enemy3[i].move();
-				/*if (p1.collision(enemy3[i])) {
-					p1.gameover = 1;
-				}*/
+	//	for (int i = 0; i < enemy3.size(); i++) {
+	//		enemy3[i].draw();
+	//		enemy3[i].shoot();
+	//		enemy3[i].drawbat();
+	//		if (enemy3[i].alive) {
+	//			enemy3[i].move();
+	//			/*if (p1.collision(enemy3[i])) {
+	//				p1.gameover = 1;
+	//			}*/
 
-			}
-		}
+	//		}
+	//	}
 	}
 	glutSwapBuffers();
 
