@@ -10,6 +10,13 @@ extern float mousey, mousex; extern int score;
 extern bool keys[5];
 float slowmo = 1;
 
+void hitenemywithbat(shape);
+void rotate_point(float& xout, float& yout,float posx,float posy, float angle) {
+	float rad = angle * PI / 180;
+	float x = xout, y = yout;
+	xout = (x - posx) * cos(rad) - (y - posy) * sin(rad) + posx;
+	yout = (x - posx) * sin(rad) + (y - posy) * cos(rad) + posy;
+}
 void drawfromhitbox(vector<vect> vec) {
 	glColor3ub(0, 0, 0);
 	glBegin(GL_POLYGON);
@@ -101,10 +108,11 @@ public:
 vector<bullet> bullet_buffer;
 class weapon {
 public:
-	float cooldown;
-	int basecooldown,type;
-	bool melee=false, burst_shot=false, spread_shot=false,isenemy=false;
+	float cooldown,batrot;
+	int basecooldown,type,shotsleft=0;
+	bool melee=false, burst_shot=false, spread_shot=false,isenemy=false,isswing=false,isstab=false,attacking=false,bursting=false;
 	vector<vect> meleeOriginalHitbox, meleeCurrentHitbox;
+	shape weaponhitbox;
 	weapon() : type(0), isenemy(false), melee(0), basecooldown(0), cooldown(0), burst_shot(false), spread_shot(false) {}
 	weapon(int type, bool isenemy) : type(type), isenemy(isenemy) {
 		switch (type)
@@ -115,13 +123,15 @@ public:
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
 			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,250},{25,250},{25,0} };
+			isstab = true;
 		break;
 		case 1: //bat
 			melee = 1;
-			basecooldown = 15;
+			basecooldown = 50;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
 			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,250},{25,250},{25,0} };
+			isswing = true;
 			break;
 		case 2: //pistol
 			basecooldown = 50;
@@ -133,6 +143,7 @@ public:
 			basecooldown = 40;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
+			shotsleft = 3;
 			break;
 		case 4:
 			spread_shot = true;
@@ -144,25 +155,64 @@ public:
 			break;
 		}
 	}
+	void swing(float posx,float posy,float rot) {
+		if (cooldown < 1) {
+			if (attacking) {
+				updatemeleehitbox(posx, posy, rot);
+				batrot += 10 * slowmo;
+			}
+			if (batrot >= 180) {
+				attacking = 0;
+			}
+			if (!attacking) {
+				batrot = 0;
+				cooldown = basecooldown;
+			}
+			cout << batrot << endl;
+			weaponhitbox = shape(meleeCurrentHitbox);
+			drawfromhitbox(meleeCurrentHitbox);
+			cout << posx << " " << " " << posy << " " << rot <<" "<<batrot<< endl;
+		}
+		else attacking = 0;
+	}
 	void shoot(float posx,float posy,float rot) {
 		if (!melee) {
-			if (cooldown == 0) {
+			if (cooldown < 1) {
+				bullet_buffer.push_back(bullet(posx, posy, rot, isenemy));
 				if (spread_shot) {
 					srand(time(0));
 					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
 					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
 					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
 					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
-
 				}
-				bullet_buffer.push_back(bullet(posx, posy, rot, isenemy));
+				if (burst_shot) {
+					handleburstshots();
+				}
+				else cooldown = basecooldown;
+			}
+		}
+	}
+	private:
+		void handleburstshots() {
+			if (shotsleft > 0) {
+				shotsleft--;
+				cooldown = 2;
+				bursting = 1;
+			}
+			if (!shotsleft) {
+				shotsleft = 3;
+				bursting = 0;
 				cooldown = basecooldown;
 			}
 		}
-		else {
-
+		void updatemeleehitbox(float posx,float posy,float rot) {
+			for (int i = 0; i < meleeCurrentHitbox.size(); i++) {
+				meleeCurrentHitbox[i].x = meleeOriginalHitbox[i].x + posx;
+				meleeCurrentHitbox[i].y = meleeOriginalHitbox[i].y + posy+75;
+				rotate_point(meleeCurrentHitbox[i].x, meleeCurrentHitbox[i].y, posx, posy, rot + batrot);
+			}
 		}
-	}
 };
 class player : public entity
 {
@@ -174,7 +224,7 @@ public:
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
 		hitboxes.push_back(shape(oldp));
-		pweapon = weapon(2, 0);
+		pweapon = weapon(3, 0);
 	}
 
 	void draw() {
@@ -198,7 +248,7 @@ public:
 		float x = 0, y = 0, maxvelo = 30;
 		bool dash = 0;
 		for (int i = 0; i < 5; i++) {
-			if (keys[i]) {
+			if (keys[i] && !pweapon.attacking) {
 				switch (i)
 				{
 				case 0: y += 1; break;
@@ -238,8 +288,10 @@ public:
 		}
 		posx += lastx * velo*slowmo;
 		posy += lasty * velo*slowmo;
-		rot = atan2(mousey, mousex);
-		rot = rot * 180 / PI;
+		if (!pweapon.attacking) {
+			rot = atan2(mousey, mousex);
+			rot = rot * 180 / PI;
+		}
 
 
 		for (int i = 0; i < temp.size(); i++) {
@@ -253,9 +305,19 @@ public:
 
 	}
 	void shoot() {
-		
-		if (left_click) {
-			pweapon.shoot(posx,posy,rot);
+
+		if (left_click || pweapon.bursting) {
+			if (!pweapon.melee) {
+				pweapon.shoot(posx, posy, rot);
+			}
+			else {
+				pweapon.attacking = 1;
+
+			}
+		}
+		if (pweapon.attacking) {
+			pweapon.swing(posx, posy, rot - 180);
+			hitenemywithbat(pweapon.weaponhitbox);
 		}
 	}
 };
@@ -285,7 +347,7 @@ struct crosshair {
 }cross;
 class enemy :public entity {
 public:
-	float velo = 75;
+	float velo = 10;
 	bool alive = true;
 	bool type = 0;
 	int frameswhendead = 60;
@@ -293,8 +355,8 @@ public:
 	weapon eweapon;
 	vector<vect> oldp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
 	vector<vect> temp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
-	enemy(float posx, float posy, float rot, bool type) :entity(posx, posy, rot), type(type) {
-		eweapon = weapon(4, 1);
+	enemy(float posx, float posy, float rot, weapon eweapon ) :entity(posx, posy, rot), eweapon(eweapon) {
+		eweapon = weapon(1, 1);
 	}
 	int draw() {
 		// alive
@@ -339,112 +401,67 @@ public:
 		else eweapon.cooldown = 0;
 	}
 	void move(){
-		rot = atan2(p1.posy - posy, p1.posx - posx);
-		if (!eweapon.melee) {
-			float dist = (p1.posx - posx) * (p1.posx - posx) + (p1.posy - posy) * (p1.posy - posy);
-			dist = sqrt(dist);
-			if (dist > 1200) {
-				posx += 10 * slowmo * cos(rot);
-				posy += 10 * slowmo * sin(rot);
-			}
-			cout << posx <<" "<<posy << endl;
-		}
-		else {
-			posx += velo * cos(rot) * slowmo;
-			posy += velo * sin(rot) * slowmo;
-		}
-		rot = rot * 180 / PI;
-		for (int i = 0; i < temp.size(); i++) {
-			temp[i].x = oldp[i].x + posx;
-			temp[i].y = oldp[i].y + posy;
-			rotate_point(temp[i].x, temp[i].y);
-		}
-		hitboxes.clear();
-		hitboxes.push_back(shape(temp));
-	}
-	void shoot() {
-		eweapon.shoot(posx, posy, rot);
-		cout << "shooting";
-	}
-
-};
-enemy enemy1(-2000, 1000, 0,0);
-
-class enemy_whooshwhoosh :public enemy {
-public:
-	bool attacking = 0,end=0;
-	float velo = 10;
-	float batrot = 0;
-	vector<vect> oldp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
-	vector<vect> temp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
-	vector<vect> oldbat = { {-25,0},{-25,250},{25,250},{25,0} };
-	vector<vect> tempbat = { {-25,0},{-25,250},{25,250},{25,0} };
-	enemy_whooshwhoosh(float posx = 0, float posy = 0, float rot = 0) : enemy(posx, posy, rot, 0) {}
-	void move() {
-		if (alive) {
+		if (!eweapon.attacking) {
 			rot = atan2(p1.posy - posy, p1.posx - posx);
-			posx += velo * cos(rot) * slowmo;
-			posy += velo * sin(rot) * slowmo;
+			if (!eweapon.melee) {
+				float dist = (p1.posx - posx) * (p1.posx - posx) + (p1.posy - posy) * (p1.posy - posy);
+				dist = sqrt(dist);
+				if (dist > 1200) {
+					posx += velo * slowmo * cos(rot);
+					posy += velo * slowmo * sin(rot);
+				}
+				cout << posx << " " << posy << endl;
+			}
+			else {
+				posx += velo * cos(rot) * slowmo;
+				posy += velo * sin(rot) * slowmo;
+			}
 			rot = rot * 180 / PI;
 			for (int i = 0; i < temp.size(); i++) {
 				temp[i].x = oldp[i].x + posx;
 				temp[i].y = oldp[i].y + posy;
 				rotate_point(temp[i].x, temp[i].y);
 			}
-			
 			hitboxes.clear();
 			hitboxes.push_back(shape(temp));
 		}
-		
 	}
-	void drawbat() {
-		glPushMatrix();
-		glTranslatef(posx, posy, 0);
-		glRotatef(rot+batrot,0, 0, 1.0f);
-		glTranslatef(0,75,0);
-		glColor3ub(124, 40, 20);
-		glBegin(GL_QUADS);
-		glVertex2d(-25, 0);
-		glVertex2d(-25, 250);
-		glVertex2d(25, 250);
-		glVertex2d(25, 0);
-		glEnd();
-		glPopMatrix();
-		if (attacking) {
-			if (!end) {
-				batrot -= 5*slowmo;
-				if (batrot <= -180) end = 1;
-			}
-			if (end) {
-				batrot += 5*slowmo;
-				if (batrot >= 0) end = 0;
-			}
-		}
-		else if (batrot < 0) batrot += 3 * slowmo;
+	bool playerinrange(float radius) {
+		if ((posx - p1.posx) * (posx - p1.posx) + (posy - p1.posy) * (posy - p1.posy) <= radius * radius) return true;
+		return false;
 	}
 	void shoot() {
-		if ((posx-p1.posx) * (posx - p1.posx) + (posy-p1.posy)* (posy - p1.posy) <= 250000) {
-			if(batrot>=0)
-			attacking = 1; 
-			for (int i = 0; i < tempbat.size(); i++) {
-				tempbat[i].x = oldbat[i].x + posx;
-				tempbat[i].y = oldbat[i].y + posy;
-				tempbat[i].y += 75;
-				if (attacking)
-					rotate_point(tempbat[i].x, tempbat[i].y, rot + batrot);
-			}
-			shape bat(tempbat);
-			for (auto i : p1.hitboxes) {
-				if (i.check(bat))
-					p1.gameover = 1;
+		
+		if (eweapon.melee) {
+			if (playerinrange(500) || eweapon.attacking) {
+				eweapon.attacking = 1;
+				eweapon.swing(posx, posy, rot-180);
+				if (!eweapon.weaponhitbox.vertices.empty()) {
+					for (auto& i : p1.hitboxes) {
+						if (i.check(eweapon.weaponhitbox)) p1.gameover=1;
+					}
+				}
 			}
 		}
-		else if(end) attacking = 0;
-
+		else eweapon.shoot(posx, posy, rot);
 	}
+	
 };
-enemy_whooshwhoosh enemy2(1500, 1500), enemy4(-1500, 1500);
-vector<enemy_whooshwhoosh> enemy3 = { enemy2,enemy4 };
+enemy enemy1(-2000, 1000, 0,weapon(1,0));
+vector<enemy> enemybuffer = {enemy1};
+void hitenemywithbat(shape bat) {
+	if(!bat.vertices.empty())
+	for (auto& enemy : enemybuffer) {
+		if (enemy.playerinrange(500)) {
+			for (auto& i : enemy.hitboxes) {
+				if (i.check(bat)) {
+					enemy.alive = 0;
+				}
+			}
+		}
+	}
+}
+
 class Wall {
 public:
 	void draw() {

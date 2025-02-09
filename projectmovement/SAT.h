@@ -32,6 +32,7 @@ public:
 class shape {
 public:
 	vector<vect> vertices;
+	shape() {}
 	shape(vector<vect>& vertices) : vertices(vertices) {}
 	pair<float, float> project(vect& axis) {
 

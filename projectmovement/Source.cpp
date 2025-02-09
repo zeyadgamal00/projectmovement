@@ -90,7 +90,7 @@ void spawnEnemy() {
 	int sign = rand() % 2 *2 - 1;
 	float xpos = (((rand() % 2400) * 2 - 2400)) - p1.posx*sign;
 	float ypos = (((rand() % 2400) * 2 - 2400)) - p1.posy*sign;
-	enemy3.push_back(enemy_whooshwhoosh(xpos, ypos, 0));
+	enemybuffer.push_back(enemy(xpos, ypos, 0,weapon(1,1)));
 }
 void updatetitle() {
 	score++;
@@ -144,17 +144,11 @@ void game() {
 					p1.gameover = 1;
 				continue;
 			}
-			if (i.type == 0 && enemy1.alive) {
-				if (enemy1.collision(i)) {
-					enemy1.alive = false;
-					updatetitle();
-					continue;
-				}
-			}
-			for (int j = 0; j < enemy3.size(); j++) {
-				if (i.type == 0 && enemy3[j].alive) {
-					if (enemy3[j].collision(i)) {
-						enemy3[j].alive = false;
+			for (int j = 0; j < enemybuffer.size(); j++) {
+				if (i.type == 0 && enemybuffer[j].alive) {
+					if (enemybuffer[j].collision(i)) {
+						enemybuffer[j].alive = false;
+						next.pop_back();
 						updatetitle();
 						continue;
 					}
@@ -166,26 +160,14 @@ void game() {
 	bullet_buffer = next;
 
 		p1.draw();
-		/*if (p1.collision(enemy2) && enemy2.alive) {
-			p1.gameover = 1;
-		}*/
-		enemy1.draw();
-		if (enemy1.alive) {
-			enemy1.move();
-			enemy1.shoot();
+		
+		for (auto& enemy : enemybuffer) {
+			enemy.draw();
+			if (enemy.alive) {
+				enemy.move();
+				enemy.shoot();
+			}
 		}
-	//	for (int i = 0; i < enemy3.size(); i++) {
-	//		enemy3[i].draw();
-	//		enemy3[i].shoot();
-	//		enemy3[i].drawbat();
-	//		if (enemy3[i].alive) {
-	//			enemy3[i].move();
-	//			/*if (p1.collision(enemy3[i])) {
-	//				p1.gameover = 1;
-	//			}*/
-
-	//		}
-	//	}
 	}
 	glutSwapBuffers();
 
