@@ -1,0 +1,11 @@
+enemy pew pew 39
+dead me 60
+dead enemy 53
+enemy legs 16
+enemy woosh woosh 50
+legs 16
+gun 45
+shutgun 43
+smg 41
+punsh 24
+racket 32

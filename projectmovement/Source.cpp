@@ -25,6 +25,7 @@ void InitGraphics(int argc, char* argv[]);
 void SetTransformations();
 void OnDisplay();
 void game();
+
 void mouseclick(int, int, int, int);
 void OnKey(unsigned char, int, int);
 void OnKeyUp(unsigned char, int, int);
@@ -65,6 +66,7 @@ void InitGraphics(int argc, char* argv[]) {
 	glutPassiveMotionFunc(mousefunc);
 	glutMotionFunc(mousefunc);
 	glutMouseFunc(mouseclick);
+	tex_init();
 	glutMainLoop();
 }
 /**
@@ -93,7 +95,7 @@ void spawnEnemy() {
 	enemybuffer.push_back(enemy(xpos, ypos, 0,weapon(1,1)));
 }
 void updatetitle() {
-	score++;
+	
 	char buffer[100] = { 0 };
 	string str;
 	_itoa_s(score, buffer, 10);
@@ -106,18 +108,25 @@ void game() {
 	if (p1.gameover) {
 		glClearColor(0.5, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
+		if (keys[4]) {
+			p1.reset();
+			enemybuffer.clear();
+			bullet_buffer.clear();
+			score = 0;
+			updatetitle();
+		}
 	}
 	else {
 
 		last = std::chrono::steady_clock::now();
-		glClearColor(1, 1, 1, 1);
+		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
 		updateDeltaTime();
 
 
 		// Apply camera translation
 		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+		glPushMatrix();
 		int valu = 5 / (1 + score % 5);
 		auto spawn_interval = chrono::seconds(2);
 		if (last - last_spawn >= spawn_interval) {
@@ -125,9 +134,16 @@ void game() {
 			last_spawn = last;
 		}
 		p1.move();
-		cross.draw();
+
+
+		int impact_x = 0, impact_y = 0;
 		//mimic camera by moving everything else
-		glTranslatef(-p1.posx, -p1.posy, 0.0f);
+		if (impact>0) {
+			impact_x = impact * ((rand() % 2) * -1) * (rand() % 3);
+			impact_y = impact * ((rand() % 2) * -1) * (rand() % 3);
+			impact--;
+		}
+		glTranslatef(-p1.posx+impact_x, -p1.posy+impact_y, 0.0f);
 		//p1
 
 		p1.shoot();
@@ -148,7 +164,10 @@ void game() {
 				if (i.type == 0 && enemybuffer[j].alive) {
 					if (enemybuffer[j].collision(i)) {
 						enemybuffer[j].alive = false;
-						next.pop_back();
+						score++;
+						if (!next.empty()) {
+							next.pop_back();
+						}
 						updatetitle();
 						continue;
 					}
@@ -168,7 +187,9 @@ void game() {
 				enemy.shoot();
 			}
 		}
+		glPopMatrix();
 	}
+	cross.draw();
 	glutSwapBuffers();
 
 }
