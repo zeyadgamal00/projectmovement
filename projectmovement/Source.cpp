@@ -8,17 +8,16 @@
 #include<unordered_map>
 #include <mutex>
 #include "entities.h"
+#include "UI.h"
 using namespace std;
-#pragma comment(lib, "opengl32.lib")
-#pragma comment(lib, "glu32.lib")
-#pragma comment(lib, "glut32.lib")
+#pragma comment(lib, "libfreeglut_static.a")
 const int frames = 240;
 const double target = 1.0 / frames;
 std::chrono::steady_clock::time_point last, last_spawn = std::chrono::steady_clock::now();
 Wall wall;
 float mousey = 0, mousex = 0; int score = 0;
 //w,a,s,d,space
-bool keys[5] = { 0,0,0,0,0 };
+bool keys[6] = { 0,0,0,0,0,0 };
 //Collision using SAT so sadly we need to implement vector algebra D:
 
 void InitGraphics(int argc, char* argv[]);
@@ -108,10 +107,14 @@ void game() {
 	if (p1.gameover) {
 		glClearColor(0.5, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
+		retrybutton.draw();
+		retrybutton.hover();
+		retrybutton.onClick();
 		if (keys[4]) {
 			p1.reset();
 			enemybuffer.clear();
 			bullet_buffer.clear();
+			dropsbuffer.clear();
 			score = 0;
 			updatetitle();
 		}
@@ -139,8 +142,8 @@ void game() {
 		int impact_x = 0, impact_y = 0;
 		//mimic camera by moving everything else
 		if (impact>0) {
-			impact_x = impact * ((rand() % 2) * -1) * (rand() % 3);
-			impact_y = impact * ((rand() % 2) * -1) * (rand() % 3);
+			impact_x = impact * ((rand() % 2)==0? 1: -1) * (rand() % 3);
+			impact_y = impact * ((rand() % 2) == 0 ? 1 : -1) * (rand() % 3);
 			impact--;
 		}
 		glTranslatef(-p1.posx+impact_x, -p1.posy+impact_y, 0.0f);
@@ -149,7 +152,7 @@ void game() {
 		p1.shoot();
 		//bullets
 		vector<bullet> next;
-	for (auto i : bullet_buffer) {
+	for (auto &i : bullet_buffer) {
 		i.move();
 		i.draw();
 		if (!i.unneeded(p1)) {
@@ -165,6 +168,7 @@ void game() {
 					if (enemybuffer[j].collision(i)) {
 						enemybuffer[j].alive = false;
 						score++;
+						enemybuffer[j].drop();
 						if (!next.empty()) {
 							next.pop_back();
 						}
@@ -175,17 +179,23 @@ void game() {
 			}
 		}
 	}
+	
 	bullet_buffer.clear();
 	bullet_buffer = next;
-
+	
 		p1.draw();
-		
+		p1.pickup();
 		for (auto& enemy : enemybuffer) {
 			enemy.draw();
 			if (enemy.alive) {
 				enemy.move();
 				enemy.shoot();
 			}
+		}
+
+		for (auto& i : dropsbuffer) {
+			i.move();
+			i.draw();
 		}
 		glPopMatrix();
 	}
@@ -201,6 +211,7 @@ void OnKey(unsigned char key, int x, int y) {
 	case 's':keys[2] = 1; break;
 	case 'd':keys[3] = 1; break;
 	case 32: keys[4] = 1; break;
+	case 'e': keys[5] = 1; break;
 	default:
 		break;
 	}
@@ -213,6 +224,7 @@ void OnKeyUp(unsigned char key, int x, int y) {
 	case 's':keys[2] = 0; break;
 	case 'd':keys[3] = 0; break;
 	case 32: keys[4] = 0; break;
+	case 'e': keys[5] = 0; break;
 	default:
 		break;
 	}

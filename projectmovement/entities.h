@@ -3,14 +3,16 @@
 #include <bits\stdc++.h>
 #include <time.h>
 #include "loader.h"
+#include "objects.h"
 //#include "SAT.h"
 const float PI = 3.14159265359;
 using namespace std;
 extern bool left_click = 0;
 extern float mousey, mousex; extern int score;
-extern bool keys[5];
-float slowmo = 1,impact;
-
+extern bool keys[6];
+float slowmo=1;
+ float impact;
+ vector<weapondrop> dropsbuffer;
 void hitenemywithbat(shape);
 void rotate_point(float& xout, float& yout,float posx,float posy, float angle) {
 	float rad = angle * PI / 180;
@@ -21,7 +23,7 @@ void rotate_point(float& xout, float& yout,float posx,float posy, float angle) {
 void drawfromhitbox(vector<vect> vec) {
 	glColor3ub(255, 255, 255);
 	glBegin(GL_POLYGON);
-	for (auto i : vec) {
+	for (auto &i : vec) {
 		glVertex2f(i.x, i.y);
 	}
 	glEnd();
@@ -32,7 +34,7 @@ public:
 	vector<shape> hitboxes;
 	entity(float posx, float posy, float rot) : posx(posx), posy(posy), rot(rot), initx(posx), inity(posy) {}
 	bool collision(const entity& en2) {
-		for (auto i : hitboxes) {
+		for (auto &i : hitboxes) {
 			for (auto j : en2.hitboxes) {
 				if (i.check(j)) {
 					return true;
@@ -110,8 +112,8 @@ GLuint player_pistol, player_shutgun, player_bat, player_fist, enemytex[2], play
 vector<bullet> bullet_buffer;
 class weapon {
 public:
-	float cooldown,batrot=0;
-	int basecooldown,type,shotsleft=0;
+	float cooldown=0,batrot=0;
+	int basecooldown=0,type,shotsleft=0;
 	bool melee=false, burst_shot=false, spread_shot=false,isenemy=false,isswing=false,isstab=false,attacking=false,bursting=false,shooting=0;
 	vector<vect> meleeOriginalHitbox, meleeCurrentHitbox;
 	shape weaponhitbox;
@@ -199,6 +201,7 @@ public:
 				}
 				else cooldown = basecooldown;
 				shooting = 1;
+				if(!isenemy)
 				impact = 15;
 			}
 			else shooting = 0;
@@ -235,9 +238,9 @@ public:
 	int x[5], y[5];
 	vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
-	player(float posx = 0, float posy = 0, float rot = 0,int weapontype=2) :entity(posx, posy, rot) {
+	player(int weapontype=2,float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
 		hitboxes.push_back(shape(oldp));
-		pweapon = weapon(1, 0);
+		pweapon = weapon(0, 0);
 	}
 	void init() {
 		loadTexture(player_fist, "..\\Textures\\Player\\4.png", x[0], y[0]);
@@ -400,11 +403,25 @@ public:
 		
 	}
 	void reset() {
-		*this = player();
+		*this = player(pweapon.type);
 		this->init();
 	}
+	bool playerinrangeofdrops(weapondrop &d) {
+		if ((d.posx - posx) * (d.posx - posx) + (d.posy - posy) * (d.posy - posy) <= 250*250) return true;
+		return false;
+	}
+	void pickup() {
+		vector<weapondrop> next;
+		for (auto &i : dropsbuffer) {
+			if (playerinrangeofdrops(i) && keys[5]) {
+				pweapon = weapon(i.weapontype, 0);
+			}
+			else next.push_back(i);
+		}
+		dropsbuffer = next;
+	}
 };
-player p1;
+player p1(3);
 struct crosshair {
 	float posx = 0, posy = 0;
 
@@ -464,7 +481,7 @@ public:
 			glTranslatef(posx, posy, 0);
 			glRotatef(rot, 0, 0, 1.0f);
 
-			glColor3f(0, 0, 0);
+			glColor3f(1, 1, 1);
 			glBegin(GL_QUADS);
 			glVertex2f(-100, 100);
 			glVertex2f(-100, -100);
@@ -530,17 +547,20 @@ public:
 			eweapon.shoot(posx, posy, rot);
 		}
 	}
-	
+	void drop() {
+		dropsbuffer.push_back(weapondrop(posx, posy, ((rand() % 2) == 0 ? 1 : -1)*(rand() % 101) / 100 - 1,rot,eweapon.type));
+	}
 };
 enemy enemy1(-2000, 1000, 0,weapon(3,1));
 vector<enemy> enemybuffer = {enemy1};
 void hitenemywithbat(shape bat) {
 	if(!bat.vertices.empty())
 	for (auto& enemy : enemybuffer) {
-		if (enemy.playerinrange(500)) {
+		if (enemy.playerinrange(500) && enemy.alive) {
 			for (auto& i : enemy.hitboxes) {
 				if (i.check(bat)) {
 					enemy.alive = 0;
+					enemy.drop();
 				}
 			}
 		}
