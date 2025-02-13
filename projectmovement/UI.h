@@ -54,7 +54,61 @@ public:
 		glPopMatrix();
 	}
 };
+class Bar {
+public:
+	float posx, posy, sizex, sizey, indicator_width, slidervalue, indicatorxpos;
+	float minvalue, maxvalue;
+	bool isslider;
+	Bar(float posx, float posy, float sizex, float sizey, float iwidth = 0, float value = 0, float min = 0, float max = 1) : posx(posx), posy(posy), sizex(sizex), sizey(sizey), indicator_width(iwidth), slidervalue(value), minvalue(min), maxvalue(max) {
+		value = max(minvalue, value);
+		value = min(maxvalue, value);
+		indicatorxpos = ((value - minvalue) / (maxvalue - minvalue)) * (sizex-indicator_width);
+		isslider = (iwidth != 0);
+	}
+	void draw() {
+		glPushMatrix();
+		glTranslatef(posx, posy, 0);
+		glColor3f(1, 1, 1);
+		glBegin(GL_QUADS);
+		glVertex2f(-sizex / 2, -sizey / 2);
+		glVertex2f(-sizex / 2, sizey / 2);
+		glVertex2f(sizex / 2, sizey / 2);
+		glVertex2f(sizex / 2, -sizey / 2);
+		glEnd();
+		glPopMatrix();
+		if (isslider) {
+			glPushMatrix();
+			glColor3f(0, 0, 0);
+			glTranslatef(posx-sizex/2 + indicatorxpos+indicator_width/2, posy, 0);
+			glBegin(GL_QUADS);
+			glVertex2f(-indicator_width / 2, -sizey / 2);
+			glVertex2f(-indicator_width / 2, sizey / 2);
+			glVertex2f(indicator_width / 2, sizey / 2);
+			glVertex2f(indicator_width / 2, -sizey / 2);
+			glEnd();
+			glPopMatrix();
+		}
+	}
+	void drag() {
+		if (isslider) {
+			if (left_click) {
+					cout << "dragging these balls\n";
+					float leftEdge = posx - sizex / 2;
+					float x_offset = mousex - leftEdge;
+					float adjusted_offset = x_offset - indicator_width / 2;
+					float normalized = adjusted_offset / (sizex - indicator_width);
+					if (normalized < 0) normalized = 0;
+					if (normalized > 1) normalized = 1;
+					indicatorxpos = normalized * (sizex - indicator_width);
+					slidervalue = minvalue + normalized * (maxvalue - minvalue);
+					cout << slidervalue<<endl;
+					
+			}
+		}
+	}
+};
 Buttonitem retrybutton(400, 200, 0, 0, [&]() {p1.reset(); bullet_buffer.clear(); enemybuffer.clear(); left_click = 0; }, "FFFFFF");
-Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; }, "FFFFFF");
-Buttonitem settingsbutton(400, 200, 0, 0, [&]() {currentscreen = 2; }, "FFFFFF");
+Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; }, "FFFFFF");
+Buttonitem settingsbutton(400, 200, 0, 0, [&]() {currentscreen = 2; left_click = 0; }, "FFFFFF");
 Buttonitem exitbutton(400, 200, -300, -300, [&]() {glutDestroyWindow(glutGetWindow()); exit(0); }, "FFFFFF");
+Bar testbar(0, 0, 400, 100, 100, 1.1);

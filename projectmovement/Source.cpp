@@ -123,7 +123,7 @@ void screenhandler() {
 void mainmenu() {
 	glClearColor(0.1, 0.1, 0.11,1);
 	glClear(GL_COLOR_BUFFER_BIT);
-	startbutton.draw();
+	/*startbutton.draw();
 	startbutton.hover();
 	startbutton.onClick();
 	settingsbutton.draw();
@@ -131,10 +131,12 @@ void mainmenu() {
 	settingsbutton.onClick();
 	exitbutton.draw();
 	exitbutton.hover();
-	exitbutton.onClick();
+	exitbutton.onClick();*/
+	testbar.drag();
+	testbar.draw();
+
 	cross.draw();
 	glutSwapBuffers();
-	left_click = 0;
 }
 void settings() {
 	currentscreen = 1;
