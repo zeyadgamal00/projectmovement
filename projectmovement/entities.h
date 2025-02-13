@@ -2,8 +2,7 @@
 #include "SAT.h"
 #include <bits\stdc++.h>
 #include <time.h>
-#include "loader.h"
-#include "objects.h"
+#include "drops.h"
 //#include "SAT.h"
 const float PI = 3.14159265359;
 using namespace std;
@@ -57,35 +56,35 @@ public:
 	}
 
 };
-
+GLuint bullet_texture;
 class bullet : public entity {
 public:
 	float velo = 75, rad = rot * PI / 180;
 	bool type;
 	bool hit = false;
-	vector<vect> oldp = { vect(-20,20), vect(20,20), vect({20,-20}), vect({-20,-20}) };
-	vector<vect> temp = { vect(-20,20), vect(20,20), vect(20,-20), vect(-20,-20) };
+	bool initialized = false;
+	static int x, y;
+	static vector<vect> oldp;
+	vector<vect> temp;
 	bullet(float posx, float posy, float rot, bool type) : entity(posx, posy, rot), type(type) {
-
+		temp = oldp;
 		for (int i = 0; i < temp.size(); i++) {
 			temp[i].x += posx;
 			temp[i].y += posy;
 			rotate_point(temp[i].x, temp[i].y);
 		}
 		hitboxes.push_back(shape(temp));
-		}
+	}
+	static void init() {
+		loadTexture(bullet_texture, "..\\Textures\\bullet.png", x, y);
+		float hx = x / 2, hy = y / 2;
+		oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
+	}
 	void draw() {
 		glPushMatrix();
 		glTranslatef(posx, posy, 0);
 		glRotatef(rot, 0, 0, 1.0f);
-		glBegin(GL_QUADS);
-		glColor3ub(240, 150, 4);
-		glVertex2d(-20, 20);
-		glVertex2d(20, 20);
-		glVertex2d(20, -20);
-		glVertex2d(-20, -20);
-		glEnd();
-		glColor3f(1, 0, 0);
+		tdisplay(bullet_texture, 1.5, x, y, 1, 0);
 		glPopMatrix();
 
 	}
@@ -108,6 +107,9 @@ public:
 	}
 
 };
+int bullet::x = 0;
+int bullet::y = 0;
+vector<vect> bullet::oldp;
 GLuint player_pistol, player_shutgun, player_bat, player_fist, enemytex[2], player_smg;
 vector<bullet> bullet_buffer;
 class weapon {
@@ -262,7 +264,7 @@ public:
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(int weapontype=2,float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
 		hitboxes.push_back(shape(oldp));
-		pweapon = weapon(0, 0);
+		pweapon = weapon(2, 0);
 	}
 	void init() {
 		loadTexture(player_fist, "..\\Textures\\Player\\4.png", x[0], y[0]);
@@ -270,9 +272,9 @@ public:
 		loadTexture(player_pistol, "..\\Textures\\Player\\1.2.png", x[2], y[2]);
 		loadTexture(player_smg, "..\\Textures\\Player\\smg.1.png", x[3], y[3]);
 		loadTexture(player_shutgun, "..\\Textures\\Player\\2.1.png", x[4], y[4]);
-		float hx = x[0] / 2, hy = y[0] / 2;
-		vector<vect> shapes = { vect(-hx, hy), vect(hx / 2,hy), vect(hx,-hy), vect(-hx,-hy) };
-		hitboxes.push_back(shape(shapes));
+		float hx = x[0]*3.5 / 2, hy = y[0]*3.5 / 3.5;
+		oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
+		hitboxes.push_back(shape(oldp));
 
 
 		if (pweapon.type == 1)//bat
@@ -282,6 +284,7 @@ public:
 			selected = 11;
 	}
 	void draw() {
+		drawfromhitbox(temp);
 		glPushMatrix();
 		//glGenTextures(1, &idk);
 		glTranslatef(posx,posy,0);
@@ -323,13 +326,12 @@ public:
 				break;
 			case 4: //shutgon
 				if (animate) selected++;
-				if (selected / 3)
-					glTranslatef(0, -20, 0);
-				tdisplay(player_shutgun, 3.5, x[3], y[3], 5, int(selected / 2));
+				tdisplay(player_shutgun, 3.5, x[4], y[4], 5, selected / 2);
 				if (selected == 9) {
 					animate = 0;
 					selected = 0;
 				}
+				break;
 			default:
 				if (animate) selected++;
 				tdisplay(player_pistol, 3.5, x[2], y[2], 2, !selected);
@@ -342,6 +344,7 @@ public:
 
 
 		glPopMatrix();
+
 		if (pweapon.cooldown >= 1)
 			pweapon.cooldown -= 1 * slowmo;
 		else pweapon.cooldown = 0;
@@ -413,6 +416,7 @@ public:
 				pweapon.shoot(posx, posy, rot);
 			}
 			else {
+				if(pweapon.cooldown<1)
 				pweapon.attacking = 1;
 
 			}
@@ -453,70 +457,113 @@ public:
 	}
 };
 player p1(3);
+
+GLuint crosshair_texture;
 struct crosshair {
 	float posx = 0, posy = 0;
-
+	int x, y;
+	void init() {
+		loadTexture(crosshair_texture, "..\\Textures\\crosshair.png", x, y);
+	}
 	void draw() {
 		glPushMatrix();
 		glTranslatef(posx, posy, 0);
-		glColor3ub(155, 125, 0);
-		glBegin(GL_QUADS);
-		glVertex2d(-20, 20);
-		glVertex2d(20, 20);
-		glVertex2d(20, -20);
-		glVertex2d(-20, -20);
-		glEnd();
+		tdisplay(crosshair_texture, 2, x, y, 1, 0);
 		posx = mousex;
 		posy = mousey;
 		glPopMatrix();
-		glColor3ub(0, 0, 255);
+		/*glColor3ub(0, 0, 255);
 		glBegin(GL_LINES);
 		glVertex2d(0, 0);
 		glVertex2d(posx, posy);
-		glEnd();
+		glEnd();*/
 	}
 }cross;
+GLuint enemy_bat, enemy_pistol, enemy_smg, enemy_shutgun;
 class enemy :public entity {
 public:
+	int  animate = 0, selected = 0;
 	float velo = 10;
 	bool alive = true;
+	static int x[5], y[5];
 	weapon eweapon;
-	vector<vect> oldp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
+	static vector<vect> oldp;
 	vector<vect> temp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
 	enemy(float posx, float posy, float rot, int weapontype=1 ) :entity(posx, posy, rot){
 		eweapon = weapon(weapontype, 1);
+		hitboxes.push_back(shape(oldp));
+
+	}
+
+	static void init() {
+
+		loadTexture(enemy_bat, "..\\Textures\\Enemy1\\2.png", x[1], y[1]);
+
+		loadTexture(enemy_pistol, "..\\Textures\\Enemy1\\1.1.png", x[2], y[2]);
+
+		loadTexture(enemy_smg, "..\\Textures\\Enemy1\\3.png", x[3], y[3]);
+
+		loadTexture(enemy_shutgun, "..\\Textures\\Enemy1\\4.1.png", x[4], y[4]);
+
+		//for (int i = 0;i < 5;i++) {
+
+		float hx = x[2] * 3.5 / 2, hy = y[2] * 3.5 / 2;
+
+		oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
+
+		//}
 	}
 	void draw() {
 		// alive
-
-		if (alive) {
 			glPushMatrix();
 			glTranslatef(posx, posy, 0);
-			glRotatef(rot, 0, 0, 1.0f);
-	
-			glColor3f(1, 0, 0);
-			glBegin(GL_QUADS);
-			glVertex2f(-100, 100);
-			glVertex2f(-100, -100);
-			glVertex2f(100, -100);
-			glVertex2f(100, 100);
-			glEnd();
-			glPopMatrix();
-		}
-		else {
-			glPushMatrix();
-			glTranslatef(posx, posy, 0);
-			glRotatef(rot, 0, 0, 1.0f);
+			glRotatef(rot+90, 0, 0, 1.0f);
+			switch (eweapon.type)
+			{
+			case 1: //bat
+				glRotatef(90, 0, 0, 1);
+				if (animate) selected++;
+				tdisplay(enemy_bat, 3.5, x[1], y[1], 8, selected / 3);
+				if (selected == 23) {
+					animate = 0;
+					selected = 0;
+				}
+				break;
+			case 2: //pistol
+				if (animate) selected++;
+				tdisplay(enemy_pistol, 3.5, x[2], y[2], 3, bool(selected));
+				if (selected == 6) {
+					animate = 0;
+					selected = 0;
+				}
+				break;
+			case 3: //smg
+				if (animate) selected++;
+				tdisplay(enemy_smg, 3.5, x[3], y[3], 2, !selected);
+				if (selected == 7) {
+					animate = 0;
+					selected = 0;
+				}
+				break;
+			case 4: //shutgon
+				if (animate) selected++;
+				tdisplay(enemy_shutgun, 3.5, x[4], y[4], 7, selected / 6);
+				if (selected == 41) {
+					animate = 0;
+					selected = 0;
 
-			glColor3f(1, 1, 1);
-			glBegin(GL_QUADS);
-			glVertex2f(-100, 100);
-			glVertex2f(-100, -100);
-			glVertex2f(100, -100);
-			glVertex2f(100, 100);
-			glEnd();
+				}
+				break;
+			default:
+				if (animate) selected++;
+				tdisplay(player_pistol, 3.5, x[2], y[2], 2, !selected);
+				if (selected == 6) {
+					animate = 0;
+					selected = 0;
+				}
+				break;
+			}
 			glPopMatrix();
-		}
 		if (eweapon.cooldown >= 1)
 			eweapon.cooldown -= 1 * slowmo;
 		else eweapon.cooldown = 0;
@@ -553,6 +600,7 @@ public:
 	void shoot() {
 		
 		if (eweapon.melee) {
+			if (playerinrange(300) && !eweapon.cooldown)animate = true;
 			if (playerinrange(300) || eweapon.attacking) {
 				eweapon.attacking = 1;
 				eweapon.swing(posx, posy, rot-180);
@@ -564,8 +612,10 @@ public:
 			}
 		}
 		else {
-			if(playerinrange(1200))
-			eweapon.shoot(posx, posy, rot);
+			if (playerinrange(1200)) {
+				if (!eweapon.cooldown)animate = true;
+				eweapon.shoot(posx, posy, rot);
+			}
 		}
 	}
 	void drop() {
@@ -573,6 +623,9 @@ public:
 	}
 };
 enemy enemy1(-2000, 1000, 0,3);
+int enemy::x[5] = { 0 };
+int enemy::y[5] = { 0 };
+vector<vect>enemy::oldp;
 vector<enemy> enemybuffer = {enemy1};
 void hitenemywithbat(shape bat) {
 	if(!bat.vertices.empty())
@@ -587,8 +640,36 @@ void hitenemywithbat(shape bat) {
 		}
 	}
 }
+GLuint dead_enemy_texture[2];
+struct dead_enemy {
+	int selected;
+	float angle, posx, posy;
+	static int x, y;
+	dead_enemy(float x, float y, float angle) : posx(x), posy(y), angle(angle) {
+		selected = rand() % 2;
+	}
+	static void init() {
+		loadTexture(dead_enemy_texture[0], "..\\Textures\\Enemy1\\d1.png", x, y);
+		loadTexture(dead_enemy_texture[1], "..\\Textures\\Enemy1\\d2.png", x, y);
+	}
+	void diplay() {
+		glPushMatrix();
+		//glGenTextures(1, &idk);
+		glTranslatef(posx, posy, 0);
+		glRotatef(angle, 0, 0, 1);
+		tdisplay(dead_enemy_texture[selected], 3.5, x, y, 1, 0);
+		glPopMatrix();
+	}
+};
+vector<dead_enemy> dead_enemy_buffer;
+int dead_enemy::x; int dead_enemy::y;
 void tex_init() {
 	p1.init();
+	cross.init();
+	enemy::init();
+	bullet::init();
+	dead_enemy::init();
+	weapondrop::init();
 	//enemy1.init();
 }
 // the goal:

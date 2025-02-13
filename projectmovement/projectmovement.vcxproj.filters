@@ -30,13 +30,13 @@
     <ClInclude Include="loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="drops.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="objects.h">
-      <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

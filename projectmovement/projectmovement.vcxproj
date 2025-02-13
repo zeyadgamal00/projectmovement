@@ -136,13 +136,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="entities.h" />
+    <ClInclude Include="drops.h" />
     <ClInclude Include="loader.h" />
     <ClInclude Include="UI.h" />
     <ClInclude Include="SAT.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="objects.h" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

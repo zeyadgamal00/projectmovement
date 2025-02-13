@@ -155,6 +155,7 @@ void game() {
 			score = 0;
 			updatetitle();
 		}
+		dead_enemy_buffer.clear();
 	}
 	else {
 
@@ -220,20 +221,32 @@ void game() {
 	bullet_buffer.clear();
 	bullet_buffer = next;
 	
-		p1.draw();
-		p1.pickup();
+	vector<enemy> enemy_next;
 		for (auto& enemy : enemybuffer) {
 			enemy.draw();
 			if (enemy.alive) {
 				enemy.move();
 				enemy.shoot();
+				enemy_next.push_back(enemy);
+
+			}
+
+			else {
+
+				dead_enemy_buffer.push_back(dead_enemy(enemy.posx, enemy.posy, enemy.rot));
 			}
 		}
-
+			enemybuffer.clear();
+			enemybuffer = enemy_next;
+			for (auto& i : dead_enemy_buffer)i.diplay();
+			for (auto& i : enemybuffer)i.draw();
+		p1.pickup();
 		for (auto& i : dropsbuffer) {
 			i.move();
 			i.draw();
 		}
+		p1.draw();
+
 		glPopMatrix();
 	}
 	cross.draw();
