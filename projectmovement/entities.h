@@ -112,7 +112,7 @@ GLuint player_pistol, player_shutgun, player_bat, player_fist, enemytex[2], play
 vector<bullet> bullet_buffer;
 class weapon {
 public:
-	float cooldown=0,batrot=0;
+	float cooldown=0,batrot=0,move=0;
 	int basecooldown=0,type,shotsleft=0;
 	bool melee=false, burst_shot=false, spread_shot=false,isenemy=false,isswing=false,isstab=false,attacking=false,bursting=false,shooting=0;
 	vector<vect> meleeOriginalHitbox, meleeCurrentHitbox;
@@ -126,7 +126,7 @@ public:
 			basecooldown = 10;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
-			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,250},{25,250},{25,0} };
+			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,-100},{-25,75},{25,75},{25,-100} };
 			isstab = true;
 		break;
 		case 1: //bat
@@ -134,7 +134,7 @@ public:
 			basecooldown = 50;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
-			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,250},{25,250},{25,0} };
+			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,100},{25,100},{25,0} };
 			isswing = true;
 			break;
 		case 2: //pistol
@@ -167,8 +167,23 @@ public:
 			break;
 		}
 	}
+	void stab(float posx,float posy,float rot) {
+		if (cooldown < 1 && isstab) {
+			if (attacking) {
+				updatefisthitbox(posx, posy, rot,move);
+				weaponhitbox = shape(meleeCurrentHitbox);
+				drawfromhitbox(meleeCurrentHitbox);
+				move+=3;
+			}
+			if (move >= 20) {
+				move = 0;
+				attacking = 0;
+				cooldown = basecooldown;
+			}
+		}
+	}
 	void swing(float posx,float posy,float rot) {
-		if (cooldown < 1) {
+		if (cooldown < 1 && isswing) {
 			if (attacking) {
 				updatemeleehitbox(posx, posy, rot);
 				batrot += 10 * slowmo;
@@ -227,6 +242,13 @@ public:
 				rotate_point(meleeCurrentHitbox[i].x, meleeCurrentHitbox[i].y, posx, posy, rot + batrot);
 			}
 		}
+		void updatefisthitbox(float posx, float posy, float rot,int move) {
+			for (int i = 0; i < meleeCurrentHitbox.size(); i++) {
+				meleeCurrentHitbox[i].x = meleeOriginalHitbox[i].x + posx+75-move;
+				meleeCurrentHitbox[i].y = meleeOriginalHitbox[i].y + posy+move;
+				rotate_point(meleeCurrentHitbox[i].x, meleeCurrentHitbox[i].y, posx, posy, rot+25);
+			}
+		}
 };
 class player : public entity
 {
@@ -267,7 +289,7 @@ public:
 		switch (pweapon.type)
 			{
 			case 0: //fists
-				glRotatef(-90, 0, 0, 1);
+				glRotatef(90, 0, 0, 1);
 				if (animate) selected--;
 				tdisplay(player_fist, 3.5, x[0], y[0], 4, selected / 3);
 				if (selected == 0) {
@@ -397,7 +419,10 @@ public:
 			
 		}
 		if (pweapon.attacking) {
-			pweapon.swing(posx, posy, rot - 180);
+			if (pweapon.isstab) {
+				pweapon.stab(posx, posy, rot - 90);
+			}
+			else pweapon.swing(posx, posy, rot - 180);
 			hitenemywithbat(pweapon.weaponhitbox);
 		}
 		
@@ -415,6 +440,12 @@ public:
 		for (auto &i : dropsbuffer) {
 			if (playerinrangeofdrops(i) && keys[5]) {
 				pweapon = weapon(i.weapontype, 0);
+				if (pweapon.type == 1)//bat
+					selected = 20;
+
+				if (pweapon.type == 0)//fist
+					selected = 11;
+				animate = 0;
 			}
 			else next.push_back(i);
 		}
@@ -449,25 +480,21 @@ class enemy :public entity {
 public:
 	float velo = 10;
 	bool alive = true;
-	bool type = 0;
-	int frameswhendead = 60;
-	int framesleft = 60;
 	weapon eweapon;
 	vector<vect> oldp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
 	vector<vect> temp = { { -100 ,100  },{ 100,100  },{ 100 ,-100  },{ -100 ,-100  } };
-	enemy(float posx, float posy, float rot, weapon eweapon ) :entity(posx, posy, rot), eweapon(eweapon) {
-		eweapon = weapon(1, 1);
+	enemy(float posx, float posy, float rot, int weapontype=1 ) :entity(posx, posy, rot){
+		eweapon = weapon(weapontype, 1);
 	}
-	int draw() {
+	void draw() {
 		// alive
 
 		if (alive) {
 			glPushMatrix();
 			glTranslatef(posx, posy, 0);
 			glRotatef(rot, 0, 0, 1.0f);
-			if (type)
-				glColor3f(0, 0.839, 0.89);
-			else glColor3f(1, 0, 0);
+	
+			glColor3f(1, 0, 0);
 			glBegin(GL_QUADS);
 			glVertex2f(-100, 100);
 			glVertex2f(-100, -100);
@@ -489,12 +516,6 @@ public:
 			glVertex2f(100, 100);
 			glEnd();
 			glPopMatrix();
-		}
-		if (!alive) {
-			framesleft--;
-		}
-		if (!framesleft) {
-			return 0;
 		}
 		if (eweapon.cooldown >= 1)
 			eweapon.cooldown -= 1 * slowmo;
@@ -532,7 +553,7 @@ public:
 	void shoot() {
 		
 		if (eweapon.melee) {
-			if (playerinrange(500) || eweapon.attacking) {
+			if (playerinrange(300) || eweapon.attacking) {
 				eweapon.attacking = 1;
 				eweapon.swing(posx, posy, rot-180);
 				if (!eweapon.weaponhitbox.vertices.empty()) {
@@ -551,12 +572,12 @@ public:
 		dropsbuffer.push_back(weapondrop(posx, posy, ((rand() % 2) == 0 ? 1 : -1)*(rand() % 101) / 100 - 1,rot,eweapon.type));
 	}
 };
-enemy enemy1(-2000, 1000, 0,weapon(3,1));
+enemy enemy1(-2000, 1000, 0,3);
 vector<enemy> enemybuffer = {enemy1};
 void hitenemywithbat(shape bat) {
 	if(!bat.vertices.empty())
 	for (auto& enemy : enemybuffer) {
-		if (enemy.playerinrange(500) && enemy.alive) {
+		if (enemy.playerinrange(300) && enemy.alive) {
 			for (auto& i : enemy.hitboxes) {
 				if (i.check(bat)) {
 					enemy.alive = 0;
@@ -566,151 +587,6 @@ void hitenemywithbat(shape bat) {
 		}
 	}
 }
-
-class Wall {
-public:
-	void draw() {
-		glColor3f(0, 0, 0);
-		glBegin(GL_QUADS);
-		glVertex2f(31.000, 126.938);
-		glVertex2f(31.000, 454.083);
-		glVertex2f(37.083, 454.083);
-		glVertex2f(37.031, 127.000);
-		glVertex2f(63.000, 30.969);
-		glVertex2f(62.969, 134.000);
-		glVertex2f(69.031, 134.000);
-		glVertex2f(69.031, 30.969);
-		glVertex2f(31.167, 134.000);
-		glVertex2f(64.458, 133.958);
-		glVertex2f(64.562, 126.969);
-		glVertex2f(31.062, 126.969);
-		glVertex2f(31.031, 448.000);
-		glVertex2f(31.125, 453.969);
-		glVertex2f(165.000, 454.000);
-		glVertex2f(165.000, 448.000);
-		glVertex2f(158.969, 453.812);
-		glVertex2f(158.969, 384.031);
-		glVertex2f(164.938, 384.031);
-		glVertex2f(165.000, 453.875);
-		glVertex2f(158.969, 350.000);
-		glVertex2f(159.000, 192.031);
-		glVertex2f(164.969, 192.000);
-		glVertex2f(165.000, 349.969);
-		glVertex2f(31.188, 255.969);
-		glVertex2f(31.125, 262.000);
-		glVertex2f(164.750, 261.969);
-		glVertex2f(164.844, 256.000);
-		glVertex2f(160.562, 224.000);
-		glVertex2f(188.938, 223.969);
-		glVertex2f(189.031, 230.000);
-		glVertex2f(159.656, 229.969);
-		glVertex2f(158.969, 159.000);
-		glVertex2f(159.125, 96.000);
-		glVertex2f(164.969, 96.031);
-		glVertex2f(165.000, 159.000);
-		glVertex2f(63.062, 127.969);
-		glVertex2f(63.250, 134.000);
-		glVertex2f(161.438, 134.000);
-		glVertex2f(161.344, 127.969);
-		glVertex2f(62.062, 29.938);
-		glVertex2f(324.000, 30.031);
-		glVertex2f(324.042, 37.000);
-		glVertex2f(62.469, 36.969);
-		glVertex2f(159.031, 32.125);
-		glVertex2f(158.969, 62.000);
-		glVertex2f(165.031, 62.000);
-		glVertex2f(164.969, 32.000);
-		glVertex2f(319.000, 36.719);
-		glVertex2f(319.000, 126.000);
-		glVertex2f(325.031, 126.000);
-		glVertex2f(325.000, 36.656);
-		glVertex2f(319.042, 64.042);
-		glVertex2f(389.031, 64.000);
-		glVertex2f(388.969, 70.031);
-		glVertex2f(319.219, 70.000);
-		glVertex2f(383.000, 31.000);
-		glVertex2f(383.000, 229.969);
-		glVertex2f(389.031, 229.969);
-		glVertex2f(389.000, 30.969);
-		glVertex2f(383.250, 224.000);
-		glVertex2f(476.969, 224.000);
-		glVertex2f(477.031, 229.969);
-		glVertex2f(383.156, 230.000);
-		glVertex2f(510.031, 224.031);
-		glVertex2f(612.969, 223.969);
-		glVertex2f(613.000, 229.938);
-		glVertex2f(509.969, 230.000);
-		glVertex2f(383.062, 31.062);
-		glVertex2f(613.062, 31.000);
-		glVertex2f(613.000, 37.969);
-		glVertex2f(383.375, 37.969);
-		glVertex2f(607.031, 32.062);
-		glVertex2f(606.969, 422.031);
-		glVertex2f(613.062, 422.000);
-		glVertex2f(613.000, 32.094);
-		glVertex2f(611.792, 416.000);
-		glVertex2f(478.969, 415.969);
-		glVertex2f(479.062, 422.000);
-		glVertex2f(612.156, 422.000);
-		glVertex2f(478.969, 383.969);
-		glVertex2f(479.031, 454.000);
-		glVertex2f(485.000, 454.000);
-		glVertex2f(485.000, 383.969);
-		glVertex2f(485.000, 384.000);
-		glVertex2f(382.000, 384.000);
-		glVertex2f(382.000, 390.031);
-		glVertex2f(485.031, 389.969);
-		glVertex2f(482.625, 448.000);
-		glVertex2f(221.969, 448.000);
-		glVertex2f(221.969, 454.000);
-		glVertex2f(482.375, 453.969);
-		glVertex2f(222.000, 453.969);
-		glVertex2f(221.969, 382.969);
-		glVertex2f(229.031, 382.969);
-		glVertex2f(229.031, 454.000);
-		glVertex2f(159.125, 415.969);
-		glVertex2f(159.281, 421.938);
-		glVertex2f(228.656, 422.000);
-		glVertex2f(228.531, 416.000);
-		glVertex2f(229.031, 350.000);
-		glVertex2f(229.000, 287.000);
-		glVertex2f(221.969, 287.031);
-		glVertex2f(221.969, 350.031);
-		glVertex2f(221.969, 287.062);
-		glVertex2f(389.094, 286.969);
-		glVertex2f(389.062, 293.938);
-		glVertex2f(222.219, 294.000);
-		glVertex2f(382.000, 390.031);
-		glVertex2f(381.969, 287.031);
-		glVertex2f(389.094, 287.000);
-		glVertex2f(389.031, 390.062);
-		glVertex2f(413.969, 287.000);
-		glVertex2f(413.969, 358.000);
-		glVertex2f(421.031, 358.000);
-		glVertex2f(421.000, 286.969);
-		glVertex2f(414.625, 358.000);
-		glVertex2f(485.000, 357.969);
-		glVertex2f(485.031, 352.000);
-		glVertex2f(414.219, 351.969);
-		glVertex2f(485.000, 357.906);
-		glVertex2f(485.031, 286.969);
-		glVertex2f(479.000, 287.000);
-		glVertex2f(479.031, 357.969);
-		glVertex2f(414.125, 286.969);
-		glVertex2f(484.344, 286.969);
-		glVertex2f(484.500, 293.875);
-		glVertex2f(417.844, 294.000);
-		glVertex2f(319.031, 158.969);
-		glVertex2f(319.083, 230.000);
-		glVertex2f(325.042, 230.000);
-		glVertex2f(325.000, 158.938);
-		glVertex2f(325.000, 224.062);
-		glVertex2f(222.083, 224.000);
-		glVertex2f(222.042, 230.125);
-		glVertex2f(325.042, 229.958);
-		glEnd();
-	}
-};
 void tex_init() {
 	p1.init();
 	//enemy1.init();

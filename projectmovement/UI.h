@@ -2,6 +2,7 @@
 #include "entities.h"
 extern float mousex, mousey;
 extern bool left_click;
+extern int currentscreen;
 
 vector<GLubyte> hextorgb(string hex) {
 	if (hex[0] == '#') {
@@ -53,4 +54,7 @@ public:
 		glPopMatrix();
 	}
 };
-Buttonitem retrybutton(400, 200, 0, 0, [&]() {p1.reset(); bullet_buffer.clear(); enemybuffer.clear(); },"00FFFF");
+Buttonitem retrybutton(400, 200, 0, 0, [&]() {p1.reset(); bullet_buffer.clear(); enemybuffer.clear(); left_click = 0; }, "FFFFFF");
+Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; }, "FFFFFF");
+Buttonitem settingsbutton(400, 200, 0, 0, [&]() {currentscreen = 2; }, "FFFFFF");
+Buttonitem exitbutton(400, 200, -300, -300, [&]() {glutDestroyWindow(glutGetWindow()); exit(0); }, "FFFFFF");

@@ -10,12 +10,13 @@
 #include "entities.h"
 #include "UI.h"
 using namespace std;
-#pragma comment(lib, "libfreeglut_static.a")
+#pragma comment(lib, "opengl32.lib")
+#pragma comment(lib, "glu32.lib")
+#pragma comment(lib, "glut32.lib")
 const int frames = 240;
 const double target = 1.0 / frames;
 std::chrono::steady_clock::time_point last, last_spawn = std::chrono::steady_clock::now();
-Wall wall;
-float mousey = 0, mousex = 0; int score = 0;
+float mousey = 0, mousex = 0; int score = 0,currentscreen=0;
 //w,a,s,d,space
 bool keys[6] = { 0,0,0,0,0,0 };
 //Collision using SAT so sadly we need to implement vector algebra D:
@@ -23,8 +24,10 @@ bool keys[6] = { 0,0,0,0,0,0 };
 void InitGraphics(int argc, char* argv[]);
 void SetTransformations();
 void OnDisplay();
+void mainmenu();
 void game();
-
+void settings();
+void screenhandler();
 void mouseclick(int, int, int, int);
 void OnKey(unsigned char, int, int);
 void OnKeyUp(unsigned char, int, int);
@@ -56,7 +59,7 @@ void InitGraphics(int argc, char* argv[]) {
 	//OnDisplay will handle the paint event
 	glutDisplayFunc(OnDisplay);
 	// here is the setting of the idle function
-	glutIdleFunc(game);
+	glutIdleFunc(screenhandler);
 	// here is the setting of the key function
 	glutKeyboardFunc(OnKey);
 	glutKeyboardUpFunc(OnKeyUp);
@@ -91,7 +94,7 @@ void spawnEnemy() {
 	int sign = rand() % 2 *2 - 1;
 	float xpos = (((rand() % 2400) * 2 - 2400)) - p1.posx*sign;
 	float ypos = (((rand() % 2400) * 2 - 2400)) - p1.posy*sign;
-	enemybuffer.push_back(enemy(xpos, ypos, 0,weapon(1,1)));
+	enemybuffer.push_back(enemy(xpos, ypos, 0,1));
 }
 void updatetitle() {
 	
@@ -102,7 +105,41 @@ void updatetitle() {
 	str.append(buffer);
 	glutSetWindowTitle(str.c_str());
 }
-
+void screenhandler() {
+	switch (currentscreen) {
+	case 0:
+		mainmenu();
+		break;
+	case 1:
+		game();
+		break;
+	case 2:
+		settings();
+		break;
+	default:
+		break;
+	}
+}
+void mainmenu() {
+	glClearColor(0.1, 0.1, 0.11,1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	startbutton.draw();
+	startbutton.hover();
+	startbutton.onClick();
+	settingsbutton.draw();
+	settingsbutton.hover();
+	settingsbutton.onClick();
+	exitbutton.draw();
+	exitbutton.hover();
+	exitbutton.onClick();
+	cross.draw();
+	glutSwapBuffers();
+	left_click = 0;
+}
+void settings() {
+	currentscreen = 1;
+	cout << "setting'd" << endl;
+}
 void game() {
 	if (p1.gameover) {
 		glClearColor(0.5, 0, 0, 1);
