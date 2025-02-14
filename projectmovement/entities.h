@@ -59,7 +59,7 @@ public:
 GLuint bullet_texture;
 class bullet : public entity {
 public:
-	float velo = 75, rad = rot * PI / 180;
+	float velo = 75, rad;
 	bool type;
 	bool hit = false;
 	bool initialized = false;
@@ -68,6 +68,7 @@ public:
 	vector<vect> temp;
 	bullet(float posx, float posy, float rot, bool type) : entity(posx, posy, rot), type(type) {
 		temp = oldp;
+		rad = rot * PI / 180;
 		for (int i = 0; i < temp.size(); i++) {
 			temp[i].x += posx;
 			temp[i].y += posy;
@@ -77,7 +78,7 @@ public:
 	}
 	static void init() {
 		loadTexture(bullet_texture, "..\\Textures\\bullet.png", x, y);
-		float hx = x / 2, hy = y / 2;
+		float hx = x / 2.0f, hy = y / 2.f;
 		oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
 	}
 	void draw() {
@@ -86,7 +87,6 @@ public:
 		glRotatef(rot, 0, 0, 1.0f);
 		tdisplay(bullet_texture, 1.5, x, y, 1, 0);
 		glPopMatrix();
-
 	}
 	bool unneeded(const entity& p1) {
 		float disx = p1.posx - posx;
@@ -102,8 +102,9 @@ public:
 		for (int i = 0; i < temp.size(); i++) {
 			temp[i].x = oldp[i].x + posx;
 			temp[i].y = oldp[i].y+posy;
+			rotate_point(temp[i].x, temp[i].y);
 		}
-		hitboxes[0]=(shape(temp));
+		hitboxes[0] = (shape(temp));
 	}
 
 };
@@ -185,7 +186,7 @@ public:
 		}
 	}
 	void swing(float posx,float posy,float rot) {
-		if (cooldown < 1 && isswing) {
+		if (cooldown < 1.f && isswing) {
 			if (attacking) {
 				updatemeleehitbox(posx, posy, rot);
 				batrot += 10 * slowmo;
@@ -207,7 +208,6 @@ public:
 			if (cooldown < 1) {
 				bullet_buffer.push_back(bullet(posx, posy, rot, isenemy));
 				if (spread_shot) {
-					srand(time(0));
 					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
 					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
 					bullet_buffer.push_back(bullet(posx, posy, rot + ((rand() % 20) * 2 - 20) / 2, isenemy));
@@ -264,7 +264,8 @@ public:
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(int weapontype=2,float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
 		hitboxes.push_back(shape(oldp));
-		pweapon = weapon(2, 0);
+		pweapon = weapon(4, 0);
+		loadhitboxes();
 	}
 	void init() {
 		loadTexture(player_fist, "..\\Textures\\Player\\4.png", x[0], y[0]);
@@ -272,8 +273,8 @@ public:
 		loadTexture(player_pistol, "..\\Textures\\Player\\1.2.png", x[2], y[2]);
 		loadTexture(player_smg, "..\\Textures\\Player\\smg.1.png", x[3], y[3]);
 		loadTexture(player_shutgun, "..\\Textures\\Player\\2.1.png", x[4], y[4]);
-		float hx = x[0]*3.5 / 2, hy = y[0]*3.5 / 3.5;
-		oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
+		float hx = x[0]*3.5 / 2.f, hy = y[0]*3.5 / 2.f;
+		//oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
 		hitboxes.push_back(shape(oldp));
 
 
@@ -282,6 +283,30 @@ public:
 
 		if (pweapon.type == 0)//fist
 			selected = 11;
+
+	}
+	void loadhitboxes() {
+		switch (pweapon.type)
+		{
+		case 0:
+			oldp = { vect(-85, 60), vect(-85 ,-110), vect(20,-110), vect(20,60) };
+			break;
+		case 1:
+			oldp = { vect(-85, 60), vect(-85 ,-90), vect(20,-90), vect(20,60) };
+			break;
+		case 2:
+			oldp = { vect(-155, 40), vect(-155 ,-40), vect(20,-40), vect(20,40) };
+			break;
+		case 3:
+			oldp = { vect(-155, 40), vect(-155 ,-40), vect(20,-40), vect(20,40) };
+			break;
+		case 4:
+			oldp = { vect(-85, 55), vect(-85 ,-55), vect(50,-55), vect(50,55) };
+			break;
+		default:
+			oldp = { vect(-155, 40), vect(-155 ,-40), vect(20,-40), vect(20,40) };
+			break;
+		}
 	}
 	void draw() {
 		drawfromhitbox(temp);
@@ -450,6 +475,7 @@ public:
 				if (pweapon.type == 0)//fist
 					selected = 11;
 				animate = 0;
+				loadhitboxes();
 			}
 			else next.push_back(i);
 		}

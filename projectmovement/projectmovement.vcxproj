@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClInclude Include="entities.h" />
     <ClInclude Include="drops.h" />
+    <ClInclude Include="Text.h" />
     <ClInclude Include="loader.h" />
     <ClInclude Include="UI.h" />
     <ClInclude Include="SAT.h" />

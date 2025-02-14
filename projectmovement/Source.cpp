@@ -9,18 +9,19 @@
 #include <mutex>
 #include "entities.h"
 #include "UI.h"
+#include "Text.h"
 using namespace std;
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
 #pragma comment(lib, "glut32.lib")
+#pragma comment(lib, "freetype.lib")
 const int frames = 240;
 const double target = 1.0 / frames;
 std::chrono::steady_clock::time_point last, last_spawn = std::chrono::steady_clock::now();
 float mousey = 0, mousex = 0; int score = 0,currentscreen=0;
-//w,a,s,d,space
+//w,a,s,d,space,e
 bool keys[6] = { 0,0,0,0,0,0 };
-//Collision using SAT so sadly we need to implement vector algebra D:
-
+stack<int> previousscreen;
 void InitGraphics(int argc, char* argv[]);
 void SetTransformations();
 void OnDisplay();
@@ -32,11 +33,19 @@ void mouseclick(int, int, int, int);
 void OnKey(unsigned char, int, int);
 void OnKeyUp(unsigned char, int, int);
 void mousefunc(int, int);
+////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
 	srand(time(0));
+	if (!initFreeType()) {
+		return -1;
+	}
 	InitGraphics(argc, argv);
+	
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
 	return 0;
 }
+
 void updateDeltaTime() {
 	auto currentTime = std::chrono::steady_clock::now();
 	chrono::duration<double> elapsed = currentTime - last;
@@ -123,24 +132,26 @@ void screenhandler() {
 void mainmenu() {
 	glClearColor(0.1, 0.1, 0.11,1);
 	glClear(GL_COLOR_BUFFER_BIT);
-	/*startbutton.draw();
+	startbutton.draw();
 	startbutton.hover();
 	startbutton.onClick();
 	settingsbutton.draw();
 	settingsbutton.hover();
 	settingsbutton.onClick();
-	exitbutton.draw();
-	exitbutton.hover();
-	exitbutton.onClick();*/
-	testbar.drag();
-	testbar.draw();
-
+	//exitbutton.draw();
+	//exitbutton.hover();
+	//exitbutton.onClick();
 	cross.draw();
 	glutSwapBuffers();
 }
 void settings() {
-	currentscreen = 1;
-	cout << "setting'd" << endl;
+	glClearColor(0.1, 0.1, 0.11, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	backbutton.draw();
+	backbutton.hover();
+	backbutton.onClick();
+	cross.draw();
+	glutSwapBuffers();
 }
 void game() {
 	if (p1.gameover) {

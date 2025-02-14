@@ -3,16 +3,8 @@
 extern float mousex, mousey;
 extern bool left_click;
 extern int currentscreen;
-
-vector<GLubyte> hextorgb(string hex) {
-	if (hex[0] == '#') {
-		hex = hex.substr(1);
-	}
-	transform(hex.begin(), hex.end(), hex.begin(), ::toupper);
-	map<char, int> hexadec = { {'0',0}, {'1',1},{'2',2},{'3',3},{'4',4},{'5',5},{'6',6},{'7',7},{'8',8},{'9',9},{'A',10},{'B',11},{'C',12},{'D',13},{'E',14},{'F',15} };
-	GLubyte red = hexadec[hex[0]] * 16 + hexadec[hex[1]], green = hexadec[hex[2]] * 16+ hexadec[hex[3]], blue = hexadec[hex[4]] * 16 + hexadec[hex[5]];
-	return vector<GLubyte>({ red,green,blue });
-}
+#include "Text.h"
+extern stack<int> previousscreen;
 class Textitem {
 public:
 	string text;
@@ -58,7 +50,7 @@ class Bar {
 public:
 	float posx, posy, sizex, sizey, indicator_width, slidervalue, indicatorxpos;
 	float minvalue, maxvalue;
-	bool isslider;
+	bool isslider,isdragging;
 	Bar(float posx, float posy, float sizex, float sizey, float iwidth = 0, float value = 0, float min = 0, float max = 1) : posx(posx), posy(posy), sizex(sizex), sizey(sizey), indicator_width(iwidth), slidervalue(value), minvalue(min), maxvalue(max) {
 		value = max(minvalue, value);
 		value = min(maxvalue, value);
@@ -91,24 +83,31 @@ public:
 	}
 	void drag() {
 		if (isslider) {
+			if ((mousex >= posx - sizex / 2 && mousex <= posx + sizex / 2) && (mousey >= posy - sizey / 2 && mousey <= posy + sizey / 2) || isdragging)
 			if (left_click) {
-					cout << "dragging these balls\n";
-					float leftEdge = posx - sizex / 2;
-					float x_offset = mousex - leftEdge;
-					float adjusted_offset = x_offset - indicator_width / 2;
-					float normalized = adjusted_offset / (sizex - indicator_width);
-					if (normalized < 0) normalized = 0;
-					if (normalized > 1) normalized = 1;
-					indicatorxpos = normalized * (sizex - indicator_width);
-					slidervalue = minvalue + normalized * (maxvalue - minvalue);
-					cout << slidervalue<<endl;
-					
+				cout << "dragging these balls\n";
+				float leftEdge = posx - sizex / 2;
+				float x_offset = mousex - leftEdge;
+				float adjusted_offset = x_offset - indicator_width / 2;
+				float normalized = adjusted_offset / (sizex - indicator_width);
+				if (normalized < 0) normalized = 0;
+				if (normalized > 1) normalized = 1;
+				indicatorxpos = normalized * (sizex - indicator_width);
+				slidervalue = minvalue + normalized * (maxvalue - minvalue);
+				cout << slidervalue << endl;
+				isdragging = 1;
 			}
+			else isdragging = 0;
 		}
 	}
 };
 Buttonitem retrybutton(400, 200, 0, 0, [&]() {p1.reset(); bullet_buffer.clear(); enemybuffer.clear(); left_click = 0; }, "FFFFFF");
-Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; }, "FFFFFF");
-Buttonitem settingsbutton(400, 200, 0, 0, [&]() {currentscreen = 2; left_click = 0; }, "FFFFFF");
+Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>(); }, "FFFFFF");
+Buttonitem settingsbutton(400, 200, 0, 0, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "FFFFFF");
 Buttonitem exitbutton(400, 200, -300, -300, [&]() {glutDestroyWindow(glutGetWindow()); exit(0); }, "FFFFFF");
+Buttonitem backbutton(200, 200, -1050, 1050, [&]() {
+	if (!previousscreen.empty()) {
+		currentscreen = previousscreen.top();
+		previousscreen.pop();
+	}},"#FFFFFF");
 Bar testbar(0, 0, 400, 100, 100, 1.1);

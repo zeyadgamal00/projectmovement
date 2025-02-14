@@ -5,9 +5,7 @@
 #include "stb_image.h"
 #include <gl/glut.h>
 #include <iostream>
-
 // Global variables
-
 float posX = -0.5f, posY = -0.5f; // Position of the image
 float sizeX = 0.5f, sizeY = 0.5f; // Size of the image
     int width, height, nrChannels;
@@ -60,7 +58,6 @@ float sizeX = 0.5f, sizeY = 0.5f; // Size of the image
         glTexCoord2f(texX2, texY2); glVertex2f(width * scale, height * scale);
         glTexCoord2f(texX1, texY2); glVertex2f(-width * scale, height * scale);
         glEnd();
-
         glDisable(GL_TEXTURE_2D);
         glDisable(GL_BLEND);
 
