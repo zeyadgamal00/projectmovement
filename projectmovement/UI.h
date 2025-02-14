@@ -19,7 +19,8 @@ public:
 	bool ishover = 0;
 	function<void()>Buttonfunc;
 	vector<GLubyte> colors;
-	Buttonitem(float sizex, float sizey, float posx, float posy, function<void()> Buttonfunc, string color = "#000000") :sizex(sizex), sizey(sizey), posx(posx), posy(posy), Buttonfunc(Buttonfunc) {
+	string text,textcolor;
+	Buttonitem(float sizex, float sizey, float posx, float posy, function<void()> Buttonfunc, string text = "", string color = "#FFFFFF", string textcolor = "#000000") :sizex(sizex), sizey(sizey), posx(posx), posy(posy), Buttonfunc(Buttonfunc), text(text), textcolor(textcolor) {
 		colors = hextorgb(color);
 	}
 	void hover() {
@@ -44,6 +45,7 @@ public:
 		glVertex2f(sizex / 2, -sizey / 2);
 		glEnd();
 		glPopMatrix();
+		renderTextCenter(text, posx, posy,64, textcolor);
 	}
 };
 class Bar {
@@ -101,8 +103,8 @@ public:
 		}
 	}
 };
-Buttonitem retrybutton(400, 200, 0, 0, [&]() {p1.reset(); bullet_buffer.clear(); enemybuffer.clear(); left_click = 0; }, "FFFFFF");
-Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>(); }, "FFFFFF");
+Buttonitem retrybutton(400, 200, 0, 0, [&]() {p1.reset(); bullet_buffer.clear(); enemybuffer.clear(); dropsbuffer.clear(); left_click = 0; }, "FFFFFF");
+Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>(); }, "Play");
 Buttonitem settingsbutton(400, 200, 0, 0, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "FFFFFF");
 Buttonitem exitbutton(400, 200, -300, -300, [&]() {glutDestroyWindow(glutGetWindow()); exit(0); }, "FFFFFF");
 Buttonitem backbutton(200, 200, -1050, 1050, [&]() {
