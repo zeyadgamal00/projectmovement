@@ -4,8 +4,10 @@ extern float mousex, mousey;
 extern bool left_click;
 extern int currentscreen;
 #include "Text.h"
+#include "Audio.h"
 extern stack<int> previousscreen;
 extern void quitter();
+
 class Textitem {
 public:
 	string text;
@@ -88,7 +90,6 @@ public:
 		if (isslider) {
 			if ((mousex >= posx - sizex / 2 && mousex <= posx + sizex / 2) && (mousey >= posy - sizey / 2 && mousey <= posy + sizey / 2) || isdragging)
 			if (left_click) {
-				cout << "dragging these balls\n";
 				float leftEdge = posx - sizex / 2;
 				float x_offset = mousex - leftEdge;
 				float adjusted_offset = x_offset - indicator_width / 2;
@@ -99,6 +100,8 @@ public:
 				slidervalue = minvalue + normalized * (maxvalue - minvalue);
 				cout << slidervalue << endl;
 				isdragging = 1;
+				masterVolume = slidervalue;
+				changeVolume();
 			}
 			else isdragging = 0;
 		}

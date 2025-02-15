@@ -22,7 +22,7 @@ std::chrono::steady_clock::time_point last, last_spawn = std::chrono::steady_clo
 float mousey = 0, mousex = 0; int score = 0,currentscreen=0;
 //w,a,s,d,space,e
 bool keys[6] = { 0,0,0,0,0,0 };
-stack<int> previousscreen;
+stack<int> previousscreen; int temp;
 float masterVolume=1, musicVolume=1, sfxVolume=1;
 void InitGraphics(int argc, char* argv[]);
 void SetTransformations();
@@ -39,11 +39,14 @@ void quitter();
 ////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
 	srand(time(0));
+	cout << "working";
+	initmixer();
+	loadMusic("../sounds/mainmenumusic.ogg");
 	if (!initFreeType()) {
 		return -1;
 	}
-	initmixer();
-	loadMusic("../sounds/mainmenumusic.ogg");
+
+
 	playMusic(0);
 	InitGraphics(argc, argv);
 	quitter();
@@ -154,6 +157,8 @@ void settings() {
 	backbutton.draw();
 	backbutton.hover();
 	backbutton.onClick();
+	testbar.drag();
+	testbar.draw();
 	cross.draw();
 	glutSwapBuffers();
 }
@@ -313,6 +318,7 @@ void mouseclick(int button, int state, int x, int y) {
 	}
 }
 void quitter() {
+	cin >> temp;
 	glutDestroyWindow(glutGetWindow());
 	quitmixer();
 	FT_Done_Face(face);
