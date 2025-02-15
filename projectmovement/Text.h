@@ -27,7 +27,7 @@ bool initFreeType() {
         return false;
     }
 
-    if (FT_New_Face(ft, "C:\\Users\\Dell\\Downloads\\Jaywalk.ttf", 0, &face)) {
+    if (FT_New_Face(ft, "G:\\computer graphics\\git clone\\SuperPixel-m2L8j.ttf", 0, &face)) {
         std::cerr << "Error loading font!" << std::endl;
         return false;
     }

@@ -147,11 +147,22 @@ void mainmenu() {
 void settings() {
 	glClearColor(0.1, 0.1, 0.11, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
+	glPushMatrix();
+
 	backbutton.draw();
 	backbutton.hover();
 	backbutton.onClick();
 	cross.draw();
 	glutSwapBuffers();
+}
+float xdir=0.2 , ydir=0.2, xdis = 0, ydis = 0;
+void camera_hover() {
+	//cout << xdir << " " << ydir<<"\n";
+	if (abs(xdis) > 450)xdir = -xdir;
+	if (abs(ydis) > 350)ydir = -ydir;
+	xdis +=  xdir;
+	ydis +=  ydir;
+	glTranslatef(-p1.posx+xdis, -p1.posy+ydis, 0.0f);
 }
 void game() {
 	if (p1.gameover) {
@@ -160,7 +171,8 @@ void game() {
 		retrybutton.draw();
 		retrybutton.hover();
 		retrybutton.onClick();
-		if (keys[4]) {
+		glPushMatrix();
+		/*if (keys[4]) {
 			p1.reset();
 			enemybuffer.clear();
 			bullet_buffer.clear();
@@ -168,7 +180,16 @@ void game() {
 			score = 0;
 			updatetitle();
 		}
-		dead_enemy_buffer.clear();
+		dead_enemy_buffer.clear();*/
+
+		camera_hover();
+		p1.draw();
+		for (auto& i : enemybuffer)i.draw();
+		for (auto& i : dead_enemy_buffer)i.diplay();
+		for (auto& i : bullet_buffer)i.draw();
+		glPopMatrix();
+
+
 	}
 	else {
 
@@ -210,8 +231,11 @@ void game() {
 			next.push_back(i);
 
 			if (i.type == 1) {
-				if (p1.collision(i))
+				if (p1.collision(i)){
+					p1.rot = i.rot-90;
 					p1.gameover = 1;
+					p1.dselected = rand() % 9;
+				}
 				continue;
 			}
 			for (int j = 0; j < enemybuffer.size(); j++) {

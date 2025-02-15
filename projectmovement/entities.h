@@ -111,7 +111,7 @@ public:
 int bullet::x = 0;
 int bullet::y = 0;
 vector<vect> bullet::oldp;
-GLuint player_pistol, player_shutgun, player_bat, player_fist, enemytex[2], player_smg;
+GLuint player_pistol, player_shutgun, player_bat, player_fist, enemytex[2], player_smg,player_dead;
 vector<bullet> bullet_buffer;
 class weapon {
 public:
@@ -260,6 +260,7 @@ public:
 	float cooldown = 0; weapon pweapon;
 	int  animate = 0, selected = 0;
 	int x[5], y[5];
+	int dx, dy, dselected;
 	vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(int weapontype=2,float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
@@ -273,6 +274,8 @@ public:
 		loadTexture(player_pistol, "..\\Textures\\Player\\1.2.png", x[2], y[2]);
 		loadTexture(player_smg, "..\\Textures\\Player\\smg.1.png", x[3], y[3]);
 		loadTexture(player_shutgun, "..\\Textures\\Player\\2.1.png", x[4], y[4]);
+		loadTexture(player_dead, "..\\Textures\\Player\\d.png", dx, dy);
+
 		float hx = x[0]*3.5 / 2.f, hy = y[0]*3.5 / 2.f;
 		//oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
 		hitboxes.push_back(shape(oldp));
@@ -309,6 +312,14 @@ public:
 		}
 	}
 	void draw() {
+		if (gameover) {
+			glPushMatrix();
+			glTranslatef(posx, posy, 0);
+			glRotatef(rot, 0, 0, 1);
+			tdisplay(player_dead, 3.5, dx, dy, 9, dselected);
+			glPopMatrix();
+			return;
+		}
 		drawfromhitbox(temp);
 		glPushMatrix();
 		//glGenTextures(1, &idk);

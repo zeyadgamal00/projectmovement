@@ -14,7 +14,7 @@ public:
 	static int x[5], y[5];
 	weapondrop(float posx, float posy, float rotspeed, float deathrot, int weapontype) :posx(posx), posy(posy), rotspeed(rotspeed), deathrot(deathrot), weapontype(weapontype) {}
 	static void init() {
-		loadTexture(smgdrop, "..\\Textures\\Drops\\smgdrop2.png",x[3],y[3]);
+		loadTexture(smgdrop, "..\\Textures\\Drops\\smg.png",x[3],y[3]);
 	}
 	void move() {
 		if (velo >= 1) {
