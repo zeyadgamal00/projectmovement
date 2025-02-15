@@ -5,6 +5,7 @@ extern bool left_click;
 extern int currentscreen;
 #include "Text.h"
 extern stack<int> previousscreen;
+extern void quitter();
 class Textitem {
 public:
 	string text;
@@ -45,7 +46,7 @@ public:
 		glVertex2f(sizex / 2, -sizey / 2);
 		glEnd();
 		glPopMatrix();
-		renderTextCenter(text, posx, posy,64, textcolor);
+		renderTextCenter(text, posx+2, (posy-sizey/4)+4,64, textcolor);
 	}
 };
 class Bar {
@@ -105,8 +106,8 @@ public:
 };
 Buttonitem retrybutton(400, 200, 0, 0, [&]() {p1.reset(); bullet_buffer.clear(); enemybuffer.clear(); dropsbuffer.clear(); left_click = 0; }, "FFFFFF");
 Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>(); }, "Play");
-Buttonitem settingsbutton(400, 200, 0, 0, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "FFFFFF");
-Buttonitem exitbutton(400, 200, -300, -300, [&]() {glutDestroyWindow(glutGetWindow()); exit(0); }, "FFFFFF");
+Buttonitem settingsbutton(400, 200, 0, 0, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "Settings");
+Buttonitem exitbutton(400, 200, -300, -300, [&]() { quitter(); }, "Exit");
 Buttonitem backbutton(200, 200, -1050, 1050, [&]() {
 	if (!previousscreen.empty()) {
 		currentscreen = previousscreen.top();

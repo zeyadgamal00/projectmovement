@@ -149,61 +149,43 @@ float computeTextWidth(const std::string& text) {
     }
     return width;
 }
-void renderTextCenter(const std::string& text, float centerX, float centerY, int fontsize, std::string colors) {
-    FT_Set_Pixel_Sizes(face, 0, fontsize);
-
-    // Get font metrics (converted from 26.6 fixed point format).
-    float ascender = face->size->metrics.ascender / 64.0f;  // distance from baseline to top
-    float descender = face->size->metrics.descender / 64.0f;  // typically negative; distance from baseline to bottom
-
-    // Compute the text width.
+void renderTextCenter(const std::string& text, float centerX, float y, int fontsize, string colors) {
     float textWidth = computeTextWidth(text);
     float startX = centerX - textWidth / 2.0f;
-
-    // Compute the baseline for the text such that the entire text box is vertically centered.
-    // The text box spans from 'descender' to 'ascender' (relative to the baseline).
-    // Its vertical center is at (ascender + descender)/2.
-    // To center that at centerY, we set:
-    float baselineY = centerY - (ascender + descender) / 2.0f;
-
+    FT_Set_Pixel_Sizes(face, 0, fontsize);
+    int currline = 0;
     glPushMatrix();
-    // Move to starting point (startX, baselineY) where baseline will be at y=0 in our glyph drawing.
-    glTranslatef(startX, baselineY, 0.0f);
-
-    // Set the text color.
+    glTranslatef(startX, y, 0.0f);
     glColor3ubv(hextorgb(colors).data());
-
-    // Render each character.
     for (char c : text) {
-        GLuint texture = loadCharacterTexture(c);
-        if (texture == 0)
-            continue;
+            GLuint texture = loadCharacterTexture(c);
+            if (texture == 0) continue;
+            FT_GlyphSlot g = face->glyph;
+            // Adjust ypos based on the glyph metrics.
+            // If you flipped the texture coordinates as suggested earlier,
+            // you might need to use:
+            // float ypos = - (g->bitmap.rows - g->bitmap_top);
+            float ypos = -int(g->bitmap.rows - g->bitmap_top);
+            float w = g->bitmap.width;
+            float h = g->bitmap.rows;
 
-        FT_GlyphSlot g = face->glyph;
-        // To align the glyph's baseline with y=0 (our baseline), shift by -g->bitmap_top.
-        // That is, if a glyph has g->bitmap_top = 20, we translate it by -20 so that its top becomes 0 offset above baseline.
-        float y_offset = -static_cast<float>(g->bitmap_top);
-        float w = static_cast<float>(g->bitmap.width);
-        float h = static_cast<float>(g->bitmap.rows);
+            // Enable blending and texturing
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, texture);
 
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, texture);
-
-        glBegin(GL_QUADS);
-        // Draw the quad from (0, y_offset) up to (w, y_offset+h)
-        glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, y_offset + h);
-        glTexCoord2f(1.0f, 0.0f); glVertex2f(w, y_offset + h);
-        glTexCoord2f(1.0f, 1.0f); glVertex2f(w, y_offset);
-        glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, y_offset);
-        glEnd();
-
-        glDisable(GL_TEXTURE_2D);
-        glDisable(GL_BLEND);
-
-        // Advance the x position using the glyph's advance.
-        glTranslatef((face->glyph->advance.x >> 6), 0.0f, 0.0f);
+            glBegin(GL_QUADS);
+            // Swap texture coordinates if needed to flip the glyph vertically
+            glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, ypos + h);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f(w, ypos + h);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f(w, ypos);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, ypos);
+            glEnd();
+            // Advance the current position for the next glyph.
+            glTranslatef((face->glyph->advance.x >> 6), 0.0f, 0.0f);
+            glDisable(GL_TEXTURE_2D);
+            glDisable(GL_BLEND);
     }
 
     glPopMatrix();

@@ -10,6 +10,7 @@
 #include "entities.h"
 #include "UI.h"
 #include "Text.h"
+#include "Audio.h"
 using namespace std;
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
@@ -22,6 +23,7 @@ float mousey = 0, mousex = 0; int score = 0,currentscreen=0;
 //w,a,s,d,space,e
 bool keys[6] = { 0,0,0,0,0,0 };
 stack<int> previousscreen;
+float masterVolume=1, musicVolume=1, sfxVolume=1;
 void InitGraphics(int argc, char* argv[]);
 void SetTransformations();
 void OnDisplay();
@@ -33,16 +35,18 @@ void mouseclick(int, int, int, int);
 void OnKey(unsigned char, int, int);
 void OnKeyUp(unsigned char, int, int);
 void mousefunc(int, int);
+void quitter();
 ////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
 	srand(time(0));
 	if (!initFreeType()) {
 		return -1;
 	}
+	initmixer();
+	loadMusic("../sounds/mainmenumusic.ogg");
+	playMusic(0);
 	InitGraphics(argc, argv);
-	
-	FT_Done_Face(face);
-	FT_Done_FreeType(ft);
+	quitter();
 	return 0;
 }
 
@@ -138,9 +142,9 @@ void mainmenu() {
 	settingsbutton.draw();
 	settingsbutton.hover();
 	settingsbutton.onClick();
-	//exitbutton.draw();
-	//exitbutton.hover();
-	//exitbutton.onClick();
+	exitbutton.draw();
+	exitbutton.hover();
+	exitbutton.onClick();
 	cross.draw();
 	glutSwapBuffers();
 }
@@ -307,4 +311,11 @@ void mouseclick(int button, int state, int x, int y) {
 	else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
 		left_click = 0;
 	}
+}
+void quitter() {
+	glutDestroyWindow(glutGetWindow());
+	quitmixer();
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
+	exit(0);
 }
