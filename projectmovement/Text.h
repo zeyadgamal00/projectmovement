@@ -12,6 +12,7 @@
 FT_Library ft;
 FT_Face face;
 GLuint textTexture; 
+std::map<FT_ULong, GLuint> glyphTextureCache;
 vector<GLubyte> hextorgb(string hex) {
     if (hex[0] == '#') {
         hex = hex.substr(1);
@@ -131,6 +132,8 @@ void renderText(const std::string& text, float x, float y,int fontstize,string c
 
         glDisable(GL_TEXTURE_2D);
         glDisable(GL_BLEND);
+        glDeleteTextures(1, &texture);
+
     }
     glPopAttrib();
     glPopMatrix();
@@ -185,6 +188,8 @@ void renderTextCenter(const std::string& text, float centerX, float y, int fonts
             glTranslatef((face->glyph->advance.x >> 6), 0.0f, 0.0f);
             glDisable(GL_TEXTURE_2D);
             glDisable(GL_BLEND);
+            glDeleteTextures(1, &texture);
+
     }
 
     glPopMatrix();
@@ -243,6 +248,8 @@ void renderCenteredText(const std::string& text, float centerX, float y,int font
 
                 glDisable(GL_TEXTURE_2D);
                 glDisable(GL_BLEND);
+                glDeleteTextures(1, &texture);
+
             }
             // Restore the matrix for this line.
             glPopMatrix();

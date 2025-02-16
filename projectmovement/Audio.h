@@ -8,6 +8,7 @@ using namespace std;
 vector<Mix_Chunk*> sounds(15);
 vector<Mix_Music*> music;
 extern float masterVolume, musicVolume, sfxVolume;
+int slowmochannel=-1;
 void initmixer() {
 	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
 		cerr << "Couldn't Initialize SDL: " << SDL_GetError()<<"\n";
@@ -39,14 +40,12 @@ void playMusic(int index,int repeat=-1) {
 		Mix_PlayMusic(music[index], repeat);
 	}
 }
-void playSound(int index) {
+int playSound(int index,int repeat=0) {
 	Mix_VolumeChunk(sounds[index], MIX_MAX_VOLUME * sfxVolume * masterVolume);
 	if (sounds[index]) {
 
-		cout << Mix_PlayChannel(-1, sounds[index], 0) << endl;
+		return Mix_PlayChannel(-1, sounds[index], repeat);
 	}
-	cout << sounds[index] << endl;
-	cout << sounds[0] << endl;
 }
 void changeVolume() {
 	Mix_VolumeMusic(MIX_MAX_VOLUME * musicVolume * masterVolume);
@@ -70,7 +69,8 @@ void quitmixer() {
 }
 void soundsloader() { //loads commonly used sounds + music
 	loadMusic("../Sounds/mainmenumusic.ogg");
-	loadMusic("../Sounds/heartbeat.ogg");
+	loadsound("../Sounds/HeartBeat.wav",6);
+	loadMusic("../Sounds/gamemusic.ogg");
 	loadMusic("../Sounds/pausemusic.ogg");
 	loadsound("../Sounds/Swing2.wav",0);
 	loadsound("../Sounds/Swing1.wav",1);
@@ -78,4 +78,20 @@ void soundsloader() { //loads commonly used sounds + music
 	loadsound("../Sounds/Uzi.wav",3);
 	loadsound("../Sounds/Shotgun.wav",4);
 	loadsound("../Sounds/PickUpWeapon.wav",5);
+}
+void slowmotionsoundhandler() {
+	if (slowmo <=0.5) {
+		if (slowmochannel == -1) {
+			Mix_PauseMusic();
+			slowmochannel = playSound(6, -1);
+			cout << "test" << slowmo << endl << slowmochannel << endl;
+		}
+	}
+	else {
+		if (slowmochannel != -1) {
+			Mix_HaltChannel(slowmochannel);
+			Mix_ResumeMusic();
+			slowmochannel = -1;
+		}
+	}
 }

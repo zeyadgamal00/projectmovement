@@ -5,12 +5,14 @@
 #include <vector>
 #include <chrono>
 #include <thread>
+#include<string>
 #include<unordered_map>
 #include <mutex>
 #include "entities.h"
 #include "UI.h"
 #include "Text.h"
 #include "Audio.h"
+#include "background.h"
 using namespace std;
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
@@ -19,15 +21,19 @@ using namespace std;
 const int frames = 240;
 const double target = 1.0 / frames;
 std::chrono::steady_clock::time_point last, last_spawn = std::chrono::steady_clock::now();
-float mousey = 0, mousex = 0; int score = 0,currentscreen=0;
+float mousey = 0, mousex = 0; 
+int score = 0,currentscreen=0, enemycount=0,wave=1;
+int enemyfull = enemycount;
 //w,a,s,d,space,e
-bool keys[6] = { 0,0,0,0,0,0 };
+bool keys[6] = { 0,0,0,0,0,0 },ispaused=0;
 stack<int> previousscreen;
 float masterVolume=1, musicVolume=1, sfxVolume=1;
 void InitGraphics(int argc, char* argv[]);
 void SetTransformations();
 void OnDisplay();
 void mainmenu();
+void wavehandler();
+int wavetransition();
 void game();
 void settings();
 void screenhandler();
@@ -87,6 +93,8 @@ void InitGraphics(int argc, char* argv[]) {
 	glutMotionFunc(mousefunc);
 	glutMouseFunc(mouseclick);
 	tex_init();
+	retry_init();
+	init_bg();
 	glutMainLoop();
 }
 /**
@@ -108,11 +116,16 @@ void OnDisplay() {
 	glutSwapBuffers();
 }
 void spawnEnemy() {
-	srand(time(0));
-	int sign = rand() % 2 *2 - 1;
-	float xpos = (((rand() % 2400) * 2 - 2400)) - p1.posx*sign;
-	float ypos = (((rand() % 2400) * 2 - 2400)) - p1.posy*sign;
-	enemybuffer.push_back(enemy(xpos, ypos, 0,1));
+	int weapontype = rand() % 101;
+	if (weapontype <= 70) weapontype = 1;
+	else if (weapontype <= 85) weapontype = 2;
+	else if (weapontype <= 95) weapontype = 3;
+	else if (weapontype <= 100) weapontype = 4;
+	float angle = (float(rand()%101)/100.f)*2*PI;
+	float distance = 1200+(float(rand() % 101) / 100.f)*1200;
+	float xpos = p1.posx + cos(angle) * distance;
+	float ypos = p1.posy + sin(angle) * distance;
+	enemybuffer.push_back(enemy(xpos, ypos, 0,weapontype));
 }
 void updatetitle() {
 	
@@ -192,49 +205,52 @@ void resetgame() {
 	dropsbuffer.clear();
 	score = 0;
 	dead_enemy_buffer.clear();
+	enemycount = enemyfull;
 	updatetitle();
+	xdir = 0.2, ydir = 0.2, xdis = 0, ydis = 0;
+}
+void paused() {
+	glPushMatrix();
+	camera_hover();
+	p1.draw();
+	for (auto& i : enemybuffer)i.draw();
+
+	for (auto& i : dead_enemy_buffer)i.diplay();
+
+	for (auto& i : bullet_buffer)i.draw();
+
+	glPopMatrix();
+	glEnable(GL_BLEND);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glColor4f(0, 0, 0, 0.5);
+
+	glBegin(GL_QUADS);
+	glVertex2f(-1200, -1200);
+	glVertex2f(-1200, 1200);
+	glVertex2f(1200, 1200);
+	glVertex2f(1200, -1200);
+	glEnd();
+
+	glDisable(GL_BLEND);
 }
 void game() {
 	if (p1.gameover) {
 		glClearColor(0.5, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
+		background(p1.posx - xdis, p1.posy - ydis);
 		retrybutton.draw();
 		retrybutton.hover();
 		retrybutton.onClick();
 		glPushMatrix();
 		if (keys[4]) {
-			p1.reset();
-			enemybuffer.clear();
-			bullet_buffer.clear();
-			dropsbuffer.clear();
-			score = 0;
-			dead_enemy_buffer.clear();
-			updatetitle();
+			resetgame();
 		}
-		camera_hover();
-
-		p1.draw();
-
-		for (auto& i : enemybuffer)i.draw();
-
-		for (auto& i : dead_enemy_buffer)i.diplay();
-
-		for (auto& i : bullet_buffer)i.draw();
-		
-		glPopMatrix();
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glColor4f(0, 0, 0, 0.5);
-		glBegin(GL_QUADS);
-		glVertex2f(-1200 - p1.posx, -1200 - p1.posy);
-		glVertex2f(-1200 - p1.posx, 1200 - p1.posy);
-		glVertex2f(1200 - p1.posx, 1200 - p1.posy);
-		glVertex2f(1200 - p1.posx, -1200 - p1.posy);
-		glEnd();
-		glDisable(GL_BLEND);
+		paused();
 	}
-	else {
-		cross.hover = false;
+	else if(!ispaused){
+		if(cross.hover) cross.hover = false;
 		last = std::chrono::steady_clock::now();
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -245,14 +261,10 @@ void game() {
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
 		int valu = 5 / (1 + score % 5);
-		auto spawn_interval = chrono::seconds(2);
-		if (last - last_spawn >= spawn_interval) {
-			spawnEnemy();
-			last_spawn = last;
-		}
+	
 		p1.move();
-
-
+		background(p1.posx, p1.posy);
+		wavehandler();
 		int impact_x = 0, impact_y = 0;
 		//mimic camera by moving everything else
 		if (impact>0) {
@@ -276,7 +288,7 @@ void game() {
 				if (p1.collision(i)) {
 					p1.rot = i.rot - 90;
 					p1.gameover = 1;
-					p1.dselected = rand() % 9;
+					dselected = rand() % 9;
 				}
 				continue;
 			}
@@ -302,14 +314,11 @@ void game() {
 	
 	vector<enemy> enemy_next;
 		for (auto& enemy : enemybuffer) {
-			enemy.draw();
 			if (enemy.alive) {
 				enemy.move();
 				enemy.shoot();
 				enemy_next.push_back(enemy);
-
 			}
-
 			else {
 
 				dead_enemy_buffer.push_back(dead_enemy(enemy.posx, enemy.posy, enemy.rot));
@@ -325,8 +334,15 @@ void game() {
 			i.draw();
 		}
 		p1.draw();
-
 		glPopMatrix();
+	}
+	else {
+		paused();
+
+		settingsbutton.draw();
+		settingsbutton.hover();
+		settingsbutton.onClick();
+		renderCenteredText("Paused..", 0, 0, 128, "#FFFFFF");
 	}
 	cross.draw();
 	glutSwapBuffers();
@@ -341,6 +357,7 @@ void OnKey(unsigned char key, int x, int y) {
 	case 'd':keys[3] = 1; break;
 	case 32: keys[4] = 1; break;
 	case 'e': keys[5] = 1; break;
+
 	default:
 		break;
 	}
@@ -354,6 +371,7 @@ void OnKeyUp(unsigned char key, int x, int y) {
 	case 'd':keys[3] = 0; break;
 	case 32: keys[4] = 0; break;
 	case 'e': keys[5] = 0; break;
+	case 27: ispaused = !ispaused; break;
 	default:
 		break;
 	}
@@ -373,6 +391,55 @@ void mouseclick(int button, int state, int x, int y) {
 	else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
 		left_click = 0;
 	}
+}
+
+void wavehandler() {
+	if (enemycount != 0) {
+		auto spawn_interval = chrono::seconds(2);
+		if (last - last_spawn >= spawn_interval) {
+			spawnEnemy();
+			last_spawn = last;
+			enemycount--;
+		}
+	}
+	else {
+		if (dead_enemy_buffer.size() == enemyfull) {
+			if (wavetransition()) {
+				enemycount = 5 + (5 * log(wave + 1));
+				enemyfull = enemycount;
+				bullet_buffer.clear();
+				enemybuffer.clear();
+				dead_enemy_buffer.clear();
+				dropsbuffer.clear();
+				wave++;
+			}
+		}
+	}
+}
+int textpos=-1500,animframes=0;
+int wavetransition() {
+	string s = "Wave " + to_string(wave);
+	renderTextCenter(s, textpos, 600, 64, "#FFFFFF");
+	if (textpos < 0) {
+		textpos += 10;
+	}
+	else {
+		if (textpos < 1200 && animframes < 100) {
+			animframes++;
+		}
+		else {
+			textpos++;
+		}
+		if (textpos >= 300) {
+			textpos += 10;
+		}
+	}
+	if (textpos > 1500) {
+		textpos = -1500;
+		return 1;
+	}
+	return 0;
+
 }
 void quitter() {
 	quitmixer();

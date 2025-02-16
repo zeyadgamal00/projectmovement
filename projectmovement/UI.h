@@ -7,14 +7,21 @@ extern int currentscreen;
 #include "Audio.h"
 extern stack<int> previousscreen;
 extern void quitter(),resetgame();
+float* volumes[] = { &masterVolume,&sfxVolume,&musicVolume };
+int alreadydragging=0;
+GLuint retry[2];
 
-class Textitem {
-public:
-	string text;
-	float fontsize,sizex,sizey;
-	float posx=0, posy=0;
-	Textitem(string text, float fontsize, float sizex, float sizey, float posx, float posy) : text(text), fontsize(fontsize), sizex(sizex), sizey(sizey), posx(posx), posy(posy) {}
-};
+int retryx, retryy;
+
+void retry_init() {
+
+	loadTexture(retry[0], "..\\Textures\\reset1.1.png", retryx, retryy);
+
+	loadTexture(retry[1], "..\\Textures\\reset2.1.png", retryx, retryy);
+
+
+
+}
 class Buttonitem {
 	//Textitem label;
 public:
@@ -23,7 +30,8 @@ public:
 	function<void()>Buttonfunc;
 	vector<GLubyte> colors;
 	string text,textcolor;
-	Buttonitem(float sizex, float sizey, float posx, float posy, function<void()> Buttonfunc, string text = "", string color = "#FFFFFF", string textcolor = "#000000") :sizex(sizex), sizey(sizey), posx(posx), posy(posy), Buttonfunc(Buttonfunc), text(text), textcolor(textcolor) {
+	int fontsize;
+	Buttonitem(float sizex, float sizey, float posx, float posy, function<void()> Buttonfunc, string text = "", int fontsize=64, string color = "#FFFFFF", string textcolor = "#000000") :sizex(sizex), sizey(sizey), posx(posx), posy(posy), Buttonfunc(Buttonfunc), text(text), textcolor(textcolor),fontsize(fontsize) {
 		colors = hextorgb(color);
 	}
 	void hover() {
@@ -42,17 +50,26 @@ public:
 		}
 	}
 	void draw() {
+		if (text == "retry") {
+			glPushMatrix();
+			glColor3ubv(colors.data());
+			glTranslatef(posx, posy, 0);
+			tdisplay(retry[ishover], 6, retryx, retryy, 1, 0);
+			glPopMatrix();
+			return;
+		}
 		glPushMatrix();
 		glColor3ubv(colors.data());
 		glTranslatef(posx, posy, 0);
 		glBegin(GL_QUADS);
-		glVertex2f(-sizex / 2, -sizey / 2);
-		glVertex2f(-sizex / 2, sizey / 2);
-		glVertex2f(sizex / 2, sizey / 2);
-		glVertex2f(sizex / 2, -sizey / 2);
+		glVertex2d(-sizex / 2, -sizey / 2);
+		glVertex2d(-sizex / 2, sizey / 2);
+		glVertex2d(sizex / 2, sizey / 2);
+		glVertex2d(sizex / 2, -sizey / 2);
 		glEnd();
+		renderCenteredText(text, 0, -30, fontsize, textcolor);
 		glPopMatrix();
-		renderTextCenter(text, posx+2, (posy-sizey/4)+4,64, textcolor);
+
 	}
 };
 class Bar {
@@ -60,7 +77,9 @@ public:
 	float posx, posy, sizex, sizey, indicator_width, slidervalue, indicatorxpos;
 	float minvalue=0, maxvalue=1;
 	bool isslider=0,isdragging=0,ishover=false;
-	Bar(float posx, float posy, float sizex, float sizey, float iwidth = 0, float value = 0, float min = 0, float max = 1) : posx(posx), posy(posy), sizex(sizex), sizey(sizey), indicator_width(iwidth), slidervalue(value), minvalue(min), maxvalue(max) {
+	int sliderid;
+	Bar(int sliderid,float posx, float posy, float sizex, float sizey, float iwidth = 0, float value = 0, float min = 0, float max = 1) :sliderid(sliderid), posx(posx), posy(posy), sizex(sizex), sizey(sizey), indicator_width(iwidth), slidervalue(value), minvalue(min), maxvalue(max) {
+
 		value = max(minvalue, value);
 		value = min(maxvalue, value);
 		indicatorxpos = ((value - minvalue) / (maxvalue - minvalue)) * (sizex-indicator_width);
@@ -91,6 +110,8 @@ public:
 		}
 	}
 	void drag() {
+		if (alreadydragging && !isdragging)
+			return;
 		if (isslider) {
 			if ((mousex >= posx - sizex / 2 && mousex <= posx + sizex / 2) && (mousey >= posy - sizey / 2 && mousey <= posy + sizey / 2)) {
 				ishover = 1;
@@ -100,8 +121,13 @@ public:
 				ishover = 0;
 				cross.hover = false;
 			}
+
 			if (ishover || isdragging)
 				if (left_click) {
+					if (!isdragging) {
+						isdragging = 1;
+						alreadydragging = true;
+					}
 					float leftEdge = posx - sizex / 2;
 					float x_offset = mousex - leftEdge;
 					float adjusted_offset = x_offset - indicator_width / 2;
@@ -110,25 +136,31 @@ public:
 					if (normalized > 1) normalized = 1;
 					indicatorxpos = normalized * (sizex - indicator_width);
 					slidervalue = minvalue + normalized * (maxvalue - minvalue);
-					cout << slidervalue << endl;
-					isdragging = 1;
-					masterVolume = slidervalue;
+					*volumes[sliderid] = slidervalue;
 					changeVolume();
 					cross.hover = true;
 				}
-				else isdragging = 0; 
+				else if(isdragging) {
+					if (sliderid == 1) {
+						playSound(2);
+					}
+					isdragging = 0;
+					alreadydragging = 0;
+				}
 		}
+
 	}
+
 };
-Buttonitem retrybutton(400, 200, 0, 0, [&]() {resetgame(); left_click = 0; }, "FFFFFF");
-Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>(); }, "Play");
-Buttonitem settingsbutton(400, 200, 0, 0, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "Settings");
-Buttonitem exitbutton(400, 200, -300, -300, [&]() { quitter(); }, "Exit");
+Buttonitem retrybutton(400, 200, 1000, -1000, [&]() {resetgame(); left_click = 0; }, "retry");
+Buttonitem startbutton(500, 200, 0, 150, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>();  playMusic(1); }, "Play");
+Buttonitem settingsbutton(500, 200, 0, -150, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "Settings");
+Buttonitem exitbutton(500, 200, 0, -450, [&]() { quitter(); }, "Exit");
 Buttonitem backbutton(200, 200, -1050, 1050, [&]() {
 	if (!previousscreen.empty()) {
 		currentscreen = previousscreen.top();
 		previousscreen.pop();
 	}},"<");
-Bar masterAudioBar(0, 100, 400, 100, 100, 1.1);
-Bar sfxBar(-250, -50, 400, 100, 100, 1.1);
-Bar musicBar(250, -50, 400, 100, 100, 1.1);
+Bar masterAudioBar(0,0, 100, 400, 100, 100, 1.1);
+Bar sfxBar(1,-250, -50, 400, 100, 100, 1.1);
+Bar musicBar(2,250, -50, 400, 100, 100, 1.1);
