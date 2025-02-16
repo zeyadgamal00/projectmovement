@@ -17,6 +17,8 @@ using namespace std;
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
 #pragma comment(lib, "glut32.lib")
+#pragma comment(lib, "SDL2.lib")
+#pragma comment(lib, "SDL2_mixer.lib")
 #pragma comment(lib, "freetype.lib")
 const int frames = 240;
 const double target = 1.0 / frames;
@@ -169,6 +171,8 @@ void mainmenu() {
 void settings() {
 	glClearColor(0.1, 0.1, 0.11, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
+	glPushMatrix();
+
 	backbutton.draw();
 	backbutton.hover();
 	backbutton.onClick();

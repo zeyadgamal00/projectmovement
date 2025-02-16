@@ -299,7 +299,6 @@ public:
 	void init() {
 		float hx = px[0] * 3.5 / 2.f, hy = py[0] * 3.5 / 2.f;
 		//oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
-		hitboxes.push_back(shape(oldp));
 
 		selected = 0;
 		if (pweapon.type == 1)//bat
@@ -334,7 +333,7 @@ public:
 	}
 	void draw() {
 		if (gameover) {
-
+			cout << dselected<<"\n";
 			glPushMatrix();
 
 			glTranslatef(posx, posy, 0);
@@ -498,8 +497,13 @@ public:
 		
 	}
 	void reset() {
-		*this = player(pweapon.type);
+		animate = 0;
+		posx = 0;
+		posy = 0;
+		selected = 0;
+		cooldown = 0;
 		this->init();
+		gameover = 0;
 	}
 	bool playerinrangeofdrops(weapondrop &d) {
 		if ((d.posx - posx) * (d.posx - posx) + (d.posy - posy) * (d.posy - posy) <= 250*250) return true;
