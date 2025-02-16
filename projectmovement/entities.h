@@ -3,6 +3,7 @@
 #include <bits\stdc++.h>
 #include <time.h>
 #include "drops.h"
+#include "Audio.h"
 //#include "SAT.h"
 const float PI = 3.14159265359;
 using namespace std;
@@ -29,7 +30,7 @@ void drawfromhitbox(vector<vect> vec) {
 }
 class entity {
 public:
-	float posx = 0, posy = 0, rot = 0, velo = 0, accel = 0.5, lastx = 0, lasty = 0, initx = 0, inity = 0;
+	float posx = 0, posy = 0, rot = 0, velo = 0, accel = 0.1, lastx = 0, lasty = 0, initx = 0, inity = 0;
 	vector<shape> hitboxes;
 	entity(float posx, float posy, float rot) : posx(posx), posy(posy), rot(rot), initx(posx), inity(posy) {}
 	bool collision(const entity& en2) {
@@ -59,7 +60,7 @@ public:
 GLuint bullet_texture;
 class bullet : public entity {
 public:
-	float velo = 75, rad;
+	float velo = 35, rad;
 	bool type;
 	bool hit = false;
 	bool initialized = false;
@@ -111,12 +112,12 @@ public:
 int bullet::x = 0;
 int bullet::y = 0;
 vector<vect> bullet::oldp;
-GLuint player_pistol, player_shutgun, player_bat, player_fist, enemytex[2], player_smg;
+GLuint player_pistol, player_shutgun, player_bat, player_fist, enemytex[2], player_smg,player_dead;
 vector<bullet> bullet_buffer;
 class weapon {
 public:
 	float cooldown=0,batrot=0,move=0;
-	int basecooldown=0,type,shotsleft=0;
+	int basecooldown=0,type,shotsleft=0,soundtoplay=0;
 	bool melee=false, burst_shot=false, spread_shot=false,isenemy=false,isswing=false,isstab=false,attacking=false,bursting=false,shooting=0;
 	vector<vect> meleeOriginalHitbox, meleeCurrentHitbox;
 	shape weaponhitbox;
@@ -126,7 +127,7 @@ public:
 		{
 		case 0: //fists
 			melee = 1;
-			basecooldown = 10;
+			basecooldown = 100;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
 			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,-100},{-25,75},{25,75},{25,-100} };
@@ -134,34 +135,34 @@ public:
 		break;
 		case 1: //bat
 			melee = 1;
-			basecooldown = 50;
+			basecooldown = 350;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
 			meleeOriginalHitbox = meleeCurrentHitbox = { {-25,0},{-25,100},{25,100},{25,0} };
 			isswing = true;
 			break;
 		case 2: //pistol
-			basecooldown = 50;
+			basecooldown = 300;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
 			break;
 		case 3: //smg
 			burst_shot = true;
-			basecooldown = 40;
-			if (isenemy) { basecooldown = 75; cooldown = basecooldown; }
+			basecooldown = 300;
+			if (isenemy) { basecooldown = 300; cooldown = basecooldown; }
 			else cooldown = 0;
 			shotsleft = 3;
 			break;
 		case 4:
 			spread_shot = true;
-			basecooldown = 75;
+			basecooldown = 400;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
 			break;
 		case 5:
 			spread_shot = true;
 			burst_shot = true;
-			basecooldown = 75;
+			basecooldown = 400;
 			if (isenemy) cooldown = basecooldown;
 			else cooldown = 0;
 			shotsleft = 3;
@@ -187,9 +188,12 @@ public:
 	}
 	void swing(float posx,float posy,float rot) {
 		if (cooldown < 1.f && isswing) {
+			if (attacking == 0) {
+				playSound(type);
+			}
 			if (attacking) {
 				updatemeleehitbox(posx, posy, rot);
-				batrot += 10 * slowmo;
+				batrot += 2.5 * slowmo;
 				weaponhitbox = shape(meleeCurrentHitbox);
 				drawfromhitbox(meleeCurrentHitbox);
 			}
@@ -220,6 +224,10 @@ public:
 				shooting = 1;
 				if(!isenemy)
 				impact = 15;
+				if (type == 5) {
+					playSound(4);
+				}
+				else playSound(type);
 			}
 			else shooting = 0;
 		}
@@ -228,7 +236,7 @@ public:
 		void handleburstshots() {
 			if (shotsleft > 0) {
 				shotsleft--;
-				cooldown = 2;
+				cooldown = 10;
 				bursting = 1;
 			}
 			if (!shotsleft) {
@@ -260,6 +268,7 @@ public:
 	float cooldown = 0; weapon pweapon;
 	int  animate = 0, selected = 0;
 	int x[5], y[5];
+	int dx, dy, dselected;
 	vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(int weapontype=2,float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
@@ -273,6 +282,7 @@ public:
 		loadTexture(player_pistol, "..\\Textures\\Player\\1.2.png", x[2], y[2]);
 		loadTexture(player_smg, "..\\Textures\\Player\\smg.1.png", x[3], y[3]);
 		loadTexture(player_shutgun, "..\\Textures\\Player\\2.1.png", x[4], y[4]);
+		loadTexture(player_dead, "..\\Textures\\Player\\d.png", dx, dy);
 		float hx = x[0]*3.5 / 2.f, hy = y[0]*3.5 / 2.f;
 		//oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
 		hitboxes.push_back(shape(oldp));
@@ -309,6 +319,21 @@ public:
 		}
 	}
 	void draw() {
+		if (gameover) {
+
+			glPushMatrix();
+
+			glTranslatef(posx, posy, 0);
+
+			glRotatef(rot, 0, 0, 1);
+
+			tdisplay(player_dead, 3.5, dx, dy, 9, dselected);
+
+			glPopMatrix();
+
+			return;
+
+		}
 		drawfromhitbox(temp);
 		glPushMatrix();
 		//glGenTextures(1, &idk);
@@ -375,7 +400,7 @@ public:
 		else pweapon.cooldown = 0;
 	}
 	void move() {
-		float x = 0, y = 0, maxvelo = 30;
+		float x = 0, y = 0, maxvelo = 15;
 		bool dash = 0;
 		for (int i = 0; i < 5; i++) {
 			if (keys[i] && !pweapon.attacking) {
@@ -441,8 +466,10 @@ public:
 				pweapon.shoot(posx, posy, rot);
 			}
 			else {
-				if(pweapon.cooldown<1)
-				pweapon.attacking = 1;
+				if (pweapon.cooldown < 1) {
+					pweapon.attacking = 1;
+					playSound(pweapon.type);
+				}
 
 			}
 			
@@ -476,6 +503,7 @@ public:
 					selected = 11;
 				animate = 0;
 				loadhitboxes();
+				playSound(5);
 			}
 			else next.push_back(i);
 		}
@@ -484,17 +512,20 @@ public:
 };
 player p1(3);
 
-GLuint crosshair_texture;
+GLuint crosshair_texture,crosshairhover_texture;
 struct crosshair {
 	float posx = 0, posy = 0;
+	bool hover = false;
 	int x, y;
 	void init() {
 		loadTexture(crosshair_texture, "..\\Textures\\crosshair.png", x, y);
+		loadTexture(crosshairhover_texture, "..\\Textures\\crosshairhover.png", x, y);
 	}
 	void draw() {
 		glPushMatrix();
 		glTranslatef(posx, posy, 0);
-		tdisplay(crosshair_texture, 2, x, y, 1, 0);
+		if (hover) tdisplay(crosshairhover_texture, 2, x, y, 1, 0);
+		else tdisplay(crosshair_texture, 2, x, y, 1, 0);
 		posx = mousex;
 		posy = mousey;
 		glPopMatrix();
@@ -509,7 +540,7 @@ GLuint enemy_bat, enemy_pistol, enemy_smg, enemy_shutgun;
 class enemy :public entity {
 public:
 	int  animate = 0, selected = 0;
-	float velo = 10;
+	float velo = 5.f;
 	bool alive = true;
 	static int x[5], y[5];
 	weapon eweapon;
@@ -625,10 +656,13 @@ public:
 	}
 	void shoot() {
 		
-		if (eweapon.melee) {
-			if (playerinrange(300) && !eweapon.cooldown)animate = true;
-			if (playerinrange(300) || eweapon.attacking) {
-				eweapon.attacking = 1;
+		if (eweapon.melee){
+			if (playerinrange(250) || eweapon.attacking) {
+				if (eweapon.attacking == 0 && eweapon.cooldown<1) {
+					eweapon.attacking = 1;
+					playSound(eweapon.type);
+					animate = true;
+				}
 				eweapon.swing(posx, posy, rot-180);
 				if (!eweapon.weaponhitbox.vertices.empty()) {
 					for (auto& i : p1.hitboxes) {
@@ -656,7 +690,7 @@ vector<enemy> enemybuffer = {enemy1};
 void hitenemywithbat(shape bat) {
 	if(!bat.vertices.empty())
 	for (auto& enemy : enemybuffer) {
-		if (enemy.playerinrange(300) && enemy.alive) {
+		if (enemy.playerinrange(250) && enemy.alive) {
 			for (auto& i : enemy.hitboxes) {
 				if (i.check(bat)) {
 					enemy.alive = 0;
@@ -696,13 +730,5 @@ void tex_init() {
 	bullet::init();
 	dead_enemy::init();
 	weapondrop::init();
-	//enemy1.init();
 }
-// the goal:
-// hidden jam -> the hint is a screen telling you how close you are to it 
-// there are two jams one of which is the one you need to get and go to the basemant
-// the other is a bomb and you never know which is which
-// there is a timer in the back of the game with limited time to finish your goal
-// when the timer ends the jam bomb explodes killing you and the players 
-// only way out is to get the right jam and getting out through the basement
 

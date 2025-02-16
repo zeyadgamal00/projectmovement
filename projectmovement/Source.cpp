@@ -22,7 +22,7 @@ std::chrono::steady_clock::time_point last, last_spawn = std::chrono::steady_clo
 float mousey = 0, mousex = 0; int score = 0,currentscreen=0;
 //w,a,s,d,space,e
 bool keys[6] = { 0,0,0,0,0,0 };
-stack<int> previousscreen; int temp;
+stack<int> previousscreen;
 float masterVolume=1, musicVolume=1, sfxVolume=1;
 void InitGraphics(int argc, char* argv[]);
 void SetTransformations();
@@ -39,14 +39,12 @@ void quitter();
 ////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
 	srand(time(0));
-	cout << "working";
-	initmixer();
-	loadMusic("../sounds/mainmenumusic.ogg");
+
 	if (!initFreeType()) {
 		return -1;
 	}
-
-
+	initmixer();
+	soundsloader();
 	playMusic(0);
 	InitGraphics(argc, argv);
 	quitter();
@@ -55,9 +53,13 @@ int main(int argc, char* argv[]) {
 
 void updateDeltaTime() {
 	auto currentTime = std::chrono::steady_clock::now();
-	chrono::duration<double> elapsed = currentTime - last;
-	if (elapsed.count() < target) {
-		this_thread::sleep_for(std::chrono::duration<double>(target - elapsed.count()));
+	auto elapsed = currentTime - last;
+	if (elapsed < std::chrono::duration<double>(target)) {
+		auto remaining = std::chrono::duration<double>(target) - elapsed;
+		auto sleepDuration = remaining * 0.9;
+		std::this_thread::sleep_for(sleepDuration);
+		while (std::chrono::steady_clock::now() - last < std::chrono::duration<double>(target)) {
+		}
 	}
 	last = std::chrono::steady_clock::now();
 }
@@ -157,10 +159,40 @@ void settings() {
 	backbutton.draw();
 	backbutton.hover();
 	backbutton.onClick();
-	testbar.drag();
-	testbar.draw();
+	masterAudioBar.drag();
+	masterAudioBar.draw();
+	sfxBar.drag();
+	sfxBar.draw();
+	musicBar.drag();
+	musicBar.draw();
 	cross.draw();
 	glutSwapBuffers();
+}
+float xdir = 0.2, ydir = 0.2, xdis = 0, ydis = 0;
+
+void camera_hover() {
+
+	//cout << xdir << " " << ydir<<"\n";
+
+	if (abs(xdis) > 450)xdir = -xdir;
+
+	if (abs(ydis) > 350)ydir = -ydir;
+
+	xdis += xdir;
+
+	ydis += ydir;
+
+	glTranslatef(-p1.posx + xdis, -p1.posy + ydis, 0.0f);
+
+}
+void resetgame() {
+	p1.reset();
+	enemybuffer.clear();
+	bullet_buffer.clear();
+	dropsbuffer.clear();
+	score = 0;
+	dead_enemy_buffer.clear();
+	updatetitle();
 }
 void game() {
 	if (p1.gameover) {
@@ -169,18 +201,40 @@ void game() {
 		retrybutton.draw();
 		retrybutton.hover();
 		retrybutton.onClick();
+		glPushMatrix();
 		if (keys[4]) {
 			p1.reset();
 			enemybuffer.clear();
 			bullet_buffer.clear();
 			dropsbuffer.clear();
 			score = 0;
+			dead_enemy_buffer.clear();
 			updatetitle();
 		}
-		dead_enemy_buffer.clear();
+		camera_hover();
+
+		p1.draw();
+
+		for (auto& i : enemybuffer)i.draw();
+
+		for (auto& i : dead_enemy_buffer)i.diplay();
+
+		for (auto& i : bullet_buffer)i.draw();
+		
+		glPopMatrix();
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glColor4f(0, 0, 0, 0.5);
+		glBegin(GL_QUADS);
+		glVertex2f(-1200 - p1.posx, -1200 - p1.posy);
+		glVertex2f(-1200 - p1.posx, 1200 - p1.posy);
+		glVertex2f(1200 - p1.posx, 1200 - p1.posy);
+		glVertex2f(1200 - p1.posx, -1200 - p1.posy);
+		glEnd();
+		glDisable(GL_BLEND);
 	}
 	else {
-
+		cross.hover = false;
 		last = std::chrono::steady_clock::now();
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -219,8 +273,11 @@ void game() {
 			next.push_back(i);
 
 			if (i.type == 1) {
-				if (p1.collision(i))
+				if (p1.collision(i)) {
+					p1.rot = i.rot - 90;
 					p1.gameover = 1;
+					p1.dselected = rand() % 9;
+				}
 				continue;
 			}
 			for (int j = 0; j < enemybuffer.size(); j++) {
@@ -318,8 +375,6 @@ void mouseclick(int button, int state, int x, int y) {
 	}
 }
 void quitter() {
-	cin >> temp;
-	glutDestroyWindow(glutGetWindow());
 	quitmixer();
 	FT_Done_Face(face);
 	FT_Done_FreeType(ft);

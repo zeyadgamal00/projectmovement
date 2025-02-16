@@ -31,7 +31,6 @@ bool initFreeType() {
         std::cerr << "Error loading font!" << std::endl;
         return false;
     }
-    FT_Set_Pixel_Sizes(face, 0, 200);
 
     return true;
 }
