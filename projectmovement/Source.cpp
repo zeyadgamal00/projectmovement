@@ -158,6 +158,8 @@ void mainmenu() {
 void settings() {
 	glClearColor(0.1, 0.1, 0.11, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
+	glPushMatrix();
+
 	backbutton.draw();
 	backbutton.hover();
 	backbutton.onClick();
