@@ -84,7 +84,6 @@ void slowmotionsoundhandler() {
 		if (slowmochannel == -1) {
 			Mix_PauseMusic();
 			slowmochannel = playSound(6, -1);
-			cout << "test" << slowmo << endl << slowmochannel << endl;
 		}
 	}
 	else {

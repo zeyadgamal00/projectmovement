@@ -8,10 +8,11 @@
 const float PI = 3.14159265359;
 using namespace std;
 extern bool left_click = 0;
-extern float mousey, mousex; extern int score;
+extern float mousey, mousex, slowmoframes, slowmomax; extern int score;
 extern bool keys[6],ispaused;
 float slowmo=1;
  float impact;
+ bool stopslowmo;
  vector<weapondrop> dropsbuffer;
 void hitenemywithbat(shape);
 void rotate_point(float& xout, float& yout,float posx,float posy, float angle) {
@@ -333,15 +334,10 @@ public:
 	}
 	void draw() {
 		if (gameover) {
-			cout << dselected<<"\n";
 			glPushMatrix();
-
 			glTranslatef(posx, posy, 0);
-
 			glRotatef(rot, 0, 0, 1);
-
 			tdisplay(player_dead, 3.5, dx, dy, 9, dselected);
-
 			glPopMatrix();
 
 			return;
@@ -427,12 +423,7 @@ public:
 				}
 			}
 		}
-		if (keys[4]) {
-			slowmo = 0.1;
-
-		}
-		else { slowmo += (1 - slowmo) * 0.05; } 
-		slowmotionsoundhandler();
+		slowmohandler();
 		if (x != 0 || y != 0) {
 			if (velo <= maxvelo)
 				velo += accel;
@@ -497,13 +488,9 @@ public:
 		
 	}
 	void reset() {
-		animate = 0;
-		posx = 0;
-		posy = 0;
-		selected = 0;
-		cooldown = 0;
+		*this = player(pweapon.type);
 		this->init();
-		gameover = 0;
+
 	}
 	bool playerinrangeofdrops(weapondrop &d) {
 		if ((d.posx - posx) * (d.posx - posx) + (d.posy - posy) * (d.posy - posy) <= 250*250) return true;
@@ -527,6 +514,27 @@ public:
 			else next.push_back(i);
 		}
 		dropsbuffer = next;
+	}
+	void slowmohandler() {
+		if (keys[4]) {
+			if (slowmoframes && !stopslowmo) {
+				slowmo = 0.1;
+				slowmoframes--;
+				cout << slowmoframes << endl;
+			}
+			else {
+				slowmo += (1 - slowmo) * 0.05;
+				if (slowmoframes < 1000) slowmoframes += 1;
+				stopslowmo=1;
+			}
+		}
+		else{
+			
+			slowmo += (1 - slowmo) * 0.05;
+			if (slowmoframes < 1000) slowmoframes += 1;
+			if (slowmoframes > 250) { stopslowmo = false; }
+		}
+		slowmotionsoundhandler();
 	}
 };
 player p1(3);

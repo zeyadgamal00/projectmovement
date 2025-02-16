@@ -64,7 +64,7 @@ GLuint duplicate(GLuint floortile, int repeatX, int repeatY) {
 int bgx, bgy;
 int x=1512 , y = 1512;
 void init_bg() {
-	loadTexture(floortile, "..\\Textures\\background2.jpg", bgx, bgy);
+	loadTexture(floortile, "..\\Textures\\background1.jpg", bgx, bgy);
     floortile = duplicate(floortile, 5, 5);
 }
 void background(int posx, int posy) {

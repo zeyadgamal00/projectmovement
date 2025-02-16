@@ -150,7 +150,18 @@ public:
 		}
 
 	}
-
+	void specialdraw(float ratio,float r,float g,float b) {
+		glPushMatrix();
+		glTranslatef(posx, posy, 0);
+		glColor3f(r, g, b);
+		glBegin(GL_QUADS);
+		glVertex2f(0, sizey / 2);
+		glVertex2f(0, -sizey / 2);
+		glVertex2f(sizex/2*ratio, -sizey / 2);
+		glVertex2f(sizex/2*ratio, sizey / 2);
+		glEnd();
+		glPopMatrix();
+	}
 };
 Buttonitem retrybutton(400, 200, 1000, -1000, [&]() {resetgame(); left_click = 0; }, "retry");
 Buttonitem startbutton(500, 200, 0, 150, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>();  playMusic(1); }, "Play");
@@ -164,3 +175,5 @@ Buttonitem backbutton(200, 200, -1050, 1050, [&]() {
 Bar masterAudioBar(0,0, 100, 400, 100, 100, 1.1);
 Bar sfxBar(1,-250, -50, 400, 100, 100, 1.1);
 Bar musicBar(2,250, -50, 400, 100, 100, 1.1);
+Bar slowmoBar(-1, 700, -1100, 500, 50);
+Bar cooldownBar(-1, -700, -1100, 500, 50);

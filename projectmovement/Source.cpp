@@ -26,6 +26,7 @@ std::chrono::steady_clock::time_point last, last_spawn = std::chrono::steady_clo
 float mousey = 0, mousex = 0; 
 int score = 0,currentscreen=0, enemycount=0,wave=1;
 int enemyfull = enemycount;
+float slowmoframes = 1000,slowmomax=1000;
 //w,a,s,d,space,e
 bool keys[6] = { 0,0,0,0,0,0 },ispaused=0;
 stack<int> previousscreen;
@@ -339,6 +340,8 @@ void game() {
 		}
 		p1.draw();
 		glPopMatrix();
+		cooldownBar.specialdraw(1.f - p1.pweapon.cooldown / p1.pweapon.basecooldown, 0.192, 0.208, 0.231);
+		slowmoBar.specialdraw(static_cast<float>(slowmoframes/slowmomax), 0.145, 0.51, 0.871);
 	}
 	else {
 		paused();
@@ -359,7 +362,7 @@ void OnKey(unsigned char key, int x, int y) {
 	case 'a':keys[1] = 1; break;
 	case 's':keys[2] = 1; break;
 	case 'd':keys[3] = 1; break;
-	case 32: keys[4] = 1; break;
+	case 32: if (slowmoframes) keys[4] = 1; else keys[4] = 0; break;
 	case 'e': keys[5] = 1; break;
 
 	default:
