@@ -260,15 +260,25 @@ public:
 			}
 		}
 };
+
+
+int px[5], py[5];
+int  animate = 0, selected = 0;
+int dx, dy, dselected;
+void pload() {
+	loadTexture(player_fist, "..\\Textures\\Player\\4.png", px[0], py[0]);
+	loadTexture(player_bat, "..\\Textures\\Player\\3.1.png", px[1], py[1]);
+	loadTexture(player_pistol, "..\\Textures\\Player\\1.2.png", px[2], py[2]);
+	loadTexture(player_smg, "..\\Textures\\Player\\smg.1.png", px[3], py[3]);
+	loadTexture(player_shutgun, "..\\Textures\\Player\\2.1.png", px[4], py[4]);
+	loadTexture(player_dead, "..\\Textures\\Player\\d.png", dx, dy);
+}
 class player : public entity
 {
 public:
 	bool gameover = 0, jumpbool = 0, burst_shot = false, spread_shot = false;
 	int base_cooldown = 50, wesapon = 3;
 	float cooldown = 0; weapon pweapon;
-	int  animate = 0, selected = 0;
-	int x[5], y[5];
-	int dx, dy, dselected;
 	vector<vect> temp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(int weapontype=2,float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
@@ -277,15 +287,8 @@ public:
 		loadhitboxes();
 	}
 	void init() {
-		loadTexture(player_fist, "..\\Textures\\Player\\4.png", x[0], y[0]);
-		loadTexture(player_bat, "..\\Textures\\Player\\3.1.png", x[1], y[1]);
-		loadTexture(player_pistol, "..\\Textures\\Player\\1.2.png", x[2], y[2]);
-		loadTexture(player_smg, "..\\Textures\\Player\\smg.1.png", x[3], y[3]);
-		loadTexture(player_shutgun, "..\\Textures\\Player\\2.1.png", x[4], y[4]);
-		loadTexture(player_dead, "..\\Textures\\Player\\d.png", dx, dy);
-		float hx = x[0]*3.5 / 2.f, hy = y[0]*3.5 / 2.f;
+		float hx = px[0]*3.5 / 2.f, hy = py[0]*3.5 / 2.f;
 		//oldp = { vect(-hx, hy), vect(hx ,hy), vect(hx,-hy), vect(-hx,-hy) };
-		hitboxes.push_back(shape(oldp));
 
 
 		if (pweapon.type == 1)//bat
@@ -320,7 +323,7 @@ public:
 	}
 	void draw() {
 		if (gameover) {
-
+			cout << dselected<<"\n";
 			glPushMatrix();
 
 			glTranslatef(posx, posy, 0);
@@ -344,7 +347,7 @@ public:
 			case 0: //fists
 				glRotatef(90, 0, 0, 1);
 				if (animate) selected--;
-				tdisplay(player_fist, 3.5, x[0], y[0], 4, selected / 3);
+				tdisplay(player_fist, 3.5, px[0], py[0], 4, selected / 3);
 				if (selected == 0) {
 					animate = 0;
 					selected = 11;
@@ -353,14 +356,14 @@ public:
 			case 1: //bat
 				glRotatef(90, 0, 0, 1);
 				if (animate) selected++;
-				tdisplay(player_bat, 3.5, x[1], y[1], 7	, selected/3);
+				tdisplay(player_bat, 3.5, px[1], py[1], 7	, selected/3);
 				if (selected == 20) {
 					animate = 0;
 				}
 				break;
 			case 2: //pistol
 				if (animate) selected++;
-				tdisplay(player_pistol, 3.5, x[2], y[2], 2, !selected);
+				tdisplay(player_pistol, 3.5, px[2], py[2], 2, !selected);
 				if (selected == 6) {
 					animate = 0;
 					selected = 0;
@@ -368,7 +371,7 @@ public:
 				break;
 			case 3: //smg
 				if (animate) selected++;
-				tdisplay(player_smg, 3.5, x[3], y[3], 2, !selected);
+				tdisplay(player_smg, 3.5, px[3], py[3], 2, !selected);
 				if (selected == 5) {
 					animate = 0;
 					selected = 0;
@@ -376,7 +379,7 @@ public:
 				break;
 			case 4: //shutgon
 				if (animate) selected++;
-				tdisplay(player_shutgun, 3.5, x[4], y[4], 5, selected / 2);
+				tdisplay(player_shutgun, 3.5, px[4], py[4], 5, selected / 2);
 				if (selected == 9) {
 					animate = 0;
 					selected = 0;
@@ -384,7 +387,7 @@ public:
 				break;
 			default:
 				if (animate) selected++;
-				tdisplay(player_pistol, 3.5, x[2], y[2], 2, !selected);
+				tdisplay(player_pistol, 3.5, px[2], py[2], 2, !selected);
 				if (selected == 6) {
 					animate = 0;
 					selected = 0;
@@ -484,8 +487,13 @@ public:
 		
 	}
 	void reset() {
-		*this = player(pweapon.type);
+		animate = 0;
+		posx = 0;
+		posy = 0;
+		selected = 0;
+		cooldown = 0;
 		this->init();
+		gameover = 0;
 	}
 	bool playerinrangeofdrops(weapondrop &d) {
 		if ((d.posx - posx) * (d.posx - posx) + (d.posy - posy) * (d.posy - posy) <= 250*250) return true;
@@ -628,15 +636,15 @@ public:
 	void move(){
 		if (!eweapon.attacking) {
 			rot = atan2(p1.posy - posy, p1.posx - posx);
+			float dist = (p1.posx - posx) * (p1.posx - posx) + (p1.posy - posy) * (p1.posy - posy);
+			dist = sqrt(dist);
 			if (!eweapon.melee) {
-				float dist = (p1.posx - posx) * (p1.posx - posx) + (p1.posy - posy) * (p1.posy - posy);
-				dist = sqrt(dist);
 				if (dist > 1200) {
 					posx += velo * slowmo * cos(rot);
 					posy += velo * slowmo * sin(rot);
 				}
 			}
-			else {
+			else if(dist > 150){
 				posx += velo * cos(rot) * slowmo;
 				posy += velo * sin(rot) * slowmo;
 			}
@@ -657,7 +665,7 @@ public:
 	void shoot() {
 		
 		if (eweapon.melee){
-			if (playerinrange(250) || eweapon.attacking) {
+			if (playerinrange(150) || eweapon.attacking) {
 				if (eweapon.attacking == 0 && eweapon.cooldown<1) {
 					eweapon.attacking = 1;
 					playSound(eweapon.type);
@@ -666,7 +674,11 @@ public:
 				eweapon.swing(posx, posy, rot-180);
 				if (!eweapon.weaponhitbox.vertices.empty()) {
 					for (auto& i : p1.hitboxes) {
-						if (i.check(eweapon.weaponhitbox)) p1.gameover=1;
+						if (i.check(eweapon.weaponhitbox)) {
+							p1.rot = rot - 90;
+							p1.gameover = 1;
+							dselected = rand() % 9;
+						}
 					}
 				}
 			}
@@ -724,6 +736,7 @@ struct dead_enemy {
 vector<dead_enemy> dead_enemy_buffer;
 int dead_enemy::x; int dead_enemy::y;
 void tex_init() {
+	pload();
 	p1.init();
 	cross.init();
 	enemy::init();
