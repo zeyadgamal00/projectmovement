@@ -15,6 +15,8 @@ using namespace std;
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
 #pragma comment(lib, "glut32.lib")
+#pragma comment(lib, "SDL2.lib")
+#pragma comment(lib, "SDL2_mixer.lib")
 #pragma comment(lib, "freetype.lib")
 const int frames = 240;
 const double target = 1.0 / frames;
@@ -156,6 +158,8 @@ void mainmenu() {
 void settings() {
 	glClearColor(0.1, 0.1, 0.11, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
+	glPushMatrix();
+
 	backbutton.draw();
 	backbutton.hover();
 	backbutton.onClick();
@@ -198,9 +202,6 @@ void game() {
 	if (p1.gameover) {
 		glClearColor(0.5, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
-		retrybutton.draw();
-		retrybutton.hover();
-		retrybutton.onClick();
 		glPushMatrix();
 		if (keys[4]) {
 			p1.reset();
@@ -222,16 +223,21 @@ void game() {
 		for (auto& i : bullet_buffer)i.draw();
 		
 		glPopMatrix();
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glColor4f(0, 0, 0, 0.5);
 		glBegin(GL_QUADS);
-		glVertex2f(-1200 - p1.posx, -1200 - p1.posy);
-		glVertex2f(-1200 - p1.posx, 1200 - p1.posy);
-		glVertex2f(1200 - p1.posx, 1200 - p1.posy);
-		glVertex2f(1200 - p1.posx, -1200 - p1.posy);
+		glVertex2f(-1200 , -1200 );
+		glVertex2f(-1200 ,  1200 );
+		glVertex2f( 1200 ,  1200 );
+		glVertex2f( 1200 , -1200 );
 		glEnd();
 		glDisable(GL_BLEND);
+
+		retrybutton.draw();
+		retrybutton.hover();
+		retrybutton.onClick();
 	}
 	else {
 		cross.hover = false;
@@ -276,7 +282,7 @@ void game() {
 				if (p1.collision(i)) {
 					p1.rot = i.rot - 90;
 					p1.gameover = 1;
-					p1.dselected = rand() % 9;
+					dselected = rand() % 9;
 				}
 				continue;
 			}
