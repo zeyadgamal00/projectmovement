@@ -7,10 +7,10 @@
 #include <thread>
 #include<unordered_map>
 #include <mutex>
-#include "entities.h"
 #include "UI.h"
 #include "Text.h"
 #include "Audio.h"
+#include "background.h"
 using namespace std;
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glu32.lib")
@@ -89,6 +89,8 @@ void InitGraphics(int argc, char* argv[]) {
 	glutMotionFunc(mousefunc);
 	glutMouseFunc(mouseclick);
 	tex_init();
+	retry_init();
+	init_bg();
 	glutMainLoop();
 }
 /**
@@ -185,9 +187,6 @@ void camera_hover() {
 	xdis += xdir;
 
 	ydis += ydir;
-
-	glTranslatef(-p1.posx + xdis, -p1.posy + ydis, 0.0f);
-
 }
 void resetgame() {
 	p1.reset();
@@ -202,6 +201,7 @@ void game() {
 	if (p1.gameover) {
 		glClearColor(0.5, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
+		background( p1.posx-xdis , p1.posy- ydis);
 		glPushMatrix();
 		if (keys[4]) {
 			p1.reset();
@@ -213,7 +213,7 @@ void game() {
 			updatetitle();
 		}
 		camera_hover();
-
+			glTranslatef(-p1.posx + xdis, -p1.posy + ydis, 0.0f);
 		p1.draw();
 
 		for (auto& i : enemybuffer)i.draw();
@@ -257,6 +257,7 @@ void game() {
 			last_spawn = last;
 		}
 		p1.move();
+		background(p1.posx,p1.posy);
 
 
 		int impact_x = 0, impact_y = 0;
@@ -350,6 +351,7 @@ void OnKey(unsigned char key, int x, int y) {
 	default:
 		break;
 	}
+	if (keys[0])cout << "w\n";
 }
 void OnKeyUp(unsigned char key, int x, int y) {
 	switch (key)
@@ -363,6 +365,8 @@ void OnKeyUp(unsigned char key, int x, int y) {
 	default:
 		break;
 	}
+	if (keys[0])cout << "w\n";
+
 }
 void mousefunc(int x, int y) {
 	float nx = x / 600.0f, ny = y / 600.0f;

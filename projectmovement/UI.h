@@ -15,6 +15,17 @@ public:
 	float posx=0, posy=0;
 	Textitem(string text, float fontsize, float sizex, float sizey, float posx, float posy) : text(text), fontsize(fontsize), sizex(sizex), sizey(sizey), posx(posx), posy(posy) {}
 };
+
+
+GLuint retry[2];
+int retryx, retryy;
+void retry_init() {
+	loadTexture(retry[0], "..\\Textures\\reset1.1.png", retryx, retryy);
+	loadTexture(retry[1], "..\\Textures\\reset2.1.png", retryx, retryy);
+
+}
+
+
 class Buttonitem {
 	//Textitem label;
 public:
@@ -42,6 +53,15 @@ public:
 		}
 	}
 	void draw() {
+		if (text == "retry") {
+			glPushMatrix();
+			glColor3ubv(colors.data());
+			glTranslatef(posx, posy, 0);
+			tdisplay(retry[ishover],6,retryx,retryy,1,0);
+			glPopMatrix();
+			return;
+
+		}
 		glPushMatrix();
 		glColor3ubv(colors.data());
 		glTranslatef(posx, posy, 0);
@@ -120,7 +140,7 @@ public:
 		}
 	}
 };
-Buttonitem retrybutton(400, 200, 0, 0, [&]() {resetgame(); left_click = 0; }, "FFFFFF");
+Buttonitem retrybutton(400, 200, 1000, -1000, [&]() {resetgame(); left_click = 0; }, "retry");
 Buttonitem startbutton(400, 200, 300, 300, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>(); }, "Play");
 Buttonitem settingsbutton(400, 200, 0, 0, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "Settings");
 Buttonitem exitbutton(400, 200, -300, -300, [&]() { quitter(); }, "Exit");
