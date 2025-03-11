@@ -36,7 +36,7 @@ bool initFreeType() {
     return true;
 }
 
-// Function to load a character into a texture
+
 GLuint loadCharacterTexture(FT_ULong charCode) {
     if (FT_Load_Char(face, charCode, FT_LOAD_RENDER)) {
         std::cerr << "Error loading character!" << std::endl;
@@ -48,27 +48,26 @@ GLuint loadCharacterTexture(FT_ULong charCode) {
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    // Ensure OpenGL doesn't expect extra padding in rows.
+
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    // Get the dimensions and pitch of the bitmap.
+
     unsigned int width = g->bitmap.width;
     unsigned int height = g->bitmap.rows;
     unsigned int pitch = g->bitmap.pitch;
 
-    // Allocate an RGBA buffer (4 channels per pixel)
+
     unsigned char* expandedData = new unsigned char[width * height * 4];
 
-    // Fill the RGBA buffer row-by-row, taking pitch into account.
-    // FreeType's buffer may have extra padding at the end of each row.
+
     for (unsigned int row = 0; row < height; row++) {
         for (unsigned int col = 0; col < width; col++) {
-            // Calculate the index in the source buffer.
+
             unsigned int indexSrc = row * pitch + col;
-            // Calculate the index in the destination buffer.
+
             unsigned int indexDst = row * width + col;
 
-            // Set R, G, and B channels to 255 (white), and use the bitmap's value for alpha.
+
             expandedData[4 * indexDst] = 255;                     // Red
             expandedData[4 * indexDst + 1] = 255;                     // Green
             expandedData[4 * indexDst + 2] = 255;                     // Blue
@@ -76,14 +75,14 @@ GLuint loadCharacterTexture(FT_ULong charCode) {
         }
     }
 
-    // Upload the RGBA data to OpenGL.
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height,
         0, GL_RGBA, GL_UNSIGNED_BYTE, expandedData);
 
-    // Free the temporary buffer.
+
     delete[] expandedData;
 
-    // Set texture parameters.
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -94,7 +93,7 @@ GLuint loadCharacterTexture(FT_ULong charCode) {
 
 
 
-// Function to render text
+
 void renderText(const std::string& text, float x, float y,int fontstize,string colors) {
     glPushMatrix();
     glTranslatef(x, y, 0.0f);
@@ -115,7 +114,7 @@ void renderText(const std::string& text, float x, float y,int fontstize,string c
         float w = g->bitmap.width;
         float h = g->bitmap.rows;
 
-        // Render texture on the screen as a quad
+
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glEnable(GL_TEXTURE_2D);
@@ -127,7 +126,7 @@ void renderText(const std::string& text, float x, float y,int fontstize,string c
         glTexCoord2f(0.0f, 1.0f); glVertex2f(xpos, ypos);
         glEnd();
 
-        x += g->advance.x >> 6;  // Advance cursor by the width of the character
+        x += g->advance.x >> 6;
 
 
         glDisable(GL_TEXTURE_2D);
@@ -141,12 +140,12 @@ void renderText(const std::string& text, float x, float y,int fontstize,string c
 float computeTextWidth(const std::string& text) {
     float width = 0.0f;
     for (char c : text) {
-        // Load the character glyph
+
         if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
             std::cerr << "Error loading character '" << c << "'" << std::endl;
             continue;
         }
-        // Advance is stored in 1/64th of a pixel
+
         width += (face->glyph->advance.x >> 6);
     }
     return width;
@@ -163,28 +162,23 @@ void renderTextCenter(const std::string& text, float centerX, float y, int fonts
             GLuint texture = loadCharacterTexture(c);
             if (texture == 0) continue;
             FT_GlyphSlot g = face->glyph;
-            // Adjust ypos based on the glyph metrics.
-            // If you flipped the texture coordinates as suggested earlier,
-            // you might need to use:
-            // float ypos = - (g->bitmap.rows - g->bitmap_top);
+
             float ypos = -int(g->bitmap.rows - g->bitmap_top);
             float w = g->bitmap.width;
             float h = g->bitmap.rows;
 
-            // Enable blending and texturing
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, texture);
 
             glBegin(GL_QUADS);
-            // Swap texture coordinates if needed to flip the glyph vertically
             glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, ypos + h);
             glTexCoord2f(1.0f, 0.0f); glVertex2f(w, ypos + h);
             glTexCoord2f(1.0f, 1.0f); glVertex2f(w, ypos);
             glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, ypos);
             glEnd();
-            // Advance the current position for the next glyph.
+
             glTranslatef((face->glyph->advance.x >> 6), 0.0f, 0.0f);
             glDisable(GL_TEXTURE_2D);
             glDisable(GL_BLEND);
@@ -206,44 +200,41 @@ void renderCenteredText(const std::string& text, float centerX, float y,int font
         glPushMatrix();
         glColor3ubv(hextorgb(colors).data());
 
-        // Loop over each line.
+
         for (size_t i = 0; i < lines.size(); i++) {
-            // Compute the width for this line.
+
             float lineWidth = computeTextWidth(lines[i]);
-            // Compute the starting x position for this line so that it is centered.
+
             float startX = centerX - lineWidth / 2.0f;
 
-            // Save the matrix for this line and translate to the correct position.
             glPushMatrix();
             glTranslatef(startX, y - i * newlinedistance, 0.0f);
 
-            // Render each character of the line.
+
             for (char c : lines[i]) {
                 GLuint texture = loadCharacterTexture(c);
                 if (texture == 0)
                     continue;
 
                 FT_GlyphSlot g = face->glyph;
-                // Calculate vertical offset for the glyph.
+
                 float ypos = -int(g->bitmap.rows - g->bitmap_top);
                 float w = g->bitmap.width;
                 float h = g->bitmap.rows;
 
-                // Enable blending and texturing.
+
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 glEnable(GL_TEXTURE_2D);
                 glBindTexture(GL_TEXTURE_2D, texture);
 
                 glBegin(GL_QUADS);
-                // Adjust the texture coordinates if needed to flip vertically.
                 glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, ypos + h);
                 glTexCoord2f(1.0f, 0.0f); glVertex2f(w, ypos + h);
                 glTexCoord2f(1.0f, 1.0f); glVertex2f(w, ypos);
                 glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, ypos);
                 glEnd();
 
-                // Advance horizontally by the glyph's advance value.
                 glTranslatef((face->glyph->advance.x >> 6), 0.0f, 0.0f);
 
                 glDisable(GL_TEXTURE_2D);
@@ -251,10 +242,8 @@ void renderCenteredText(const std::string& text, float centerX, float y,int font
                 glDeleteTextures(1, &texture);
 
             }
-            // Restore the matrix for this line.
             glPopMatrix();
         }
-        // Restore the original transformation matrix.
         glPopMatrix();
     }
 

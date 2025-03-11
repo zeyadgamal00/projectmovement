@@ -13,6 +13,7 @@ extern bool keys[6],ispaused;
 float slowmo=1;
  float impact;
  bool stopslowmo;
+ bool invulnerability=0, infslowmo=0, nocooldown=0, weapon5=0;
  vector<weapondrop> dropsbuffer;
 void hitenemywithbat(shape);
 void rotate_point(float& xout, float& yout,float posx,float posy, float angle) {
@@ -180,8 +181,7 @@ public:
 			if (attacking) {
 				updatefisthitbox(posx, posy, rot,move);
 				weaponhitbox = shape(meleeCurrentHitbox);
-				drawfromhitbox(meleeCurrentHitbox);
-				move+=3;
+				move+=3*slowmo;
 			}
 			if (move >= 20) {
 				move = 0;
@@ -197,9 +197,8 @@ public:
 			}
 			if (attacking) {
 				updatemeleehitbox(posx, posy, rot);
-				batrot += 2.5 * slowmo;
+				batrot += 3 * slowmo;
 				weaponhitbox = shape(meleeCurrentHitbox);
-				drawfromhitbox(meleeCurrentHitbox);
 			}
 			if (batrot >= 180) {
 				attacking = 0;
@@ -266,7 +265,7 @@ public:
 };
 int px[5], py[5];
 
-int  animate = 0, selected = 0;
+int  animate = 0; float selected = 0;
 
 int dx, dy, dselected;
 
@@ -294,7 +293,10 @@ public:
 	vector<vect> oldp = { { -100,100 },{ 100,100 },{ 100,-100 },{ -100,-100 } };
 	player(int weapontype=2,float posx = 0, float posy = 0, float rot = 0) :entity(posx, posy, rot) {
 		hitboxes.push_back(shape(oldp));
-		pweapon = weapon(2, 0);
+		pweapon = weapon(0, 0);
+		if (weapon5) {
+			pweapon = weapon(5, 0);
+		}
 		loadhitboxes();
 	}
 	void init() {
@@ -303,7 +305,7 @@ public:
 
 		selected = 0;
 		if (pweapon.type == 1)//bat
-			selected = 20;
+			selected = 55;
 
 		if (pweapon.type == 0)//fist
 			selected = 11;
@@ -343,7 +345,6 @@ public:
 			return;
 
 		}
-		drawfromhitbox(temp);
 		glPushMatrix();
 		//glGenTextures(1, &idk);
 		glTranslatef(posx,posy,0);
@@ -352,49 +353,49 @@ public:
 			{
 			case 0: //fists
 				glRotatef(90, 0, 0, 1);
-				if (animate) selected--;
-				tdisplay(player_fist, 3.5, px[0], py[0], 4, selected / 3);
-				if (selected == 0) {
+				if (animate) selected -= slowmo;
+				tdisplay(player_fist, 3.5, px[0], py[0], 4, int(selected) / 3);
+				if (selected <= 0) {
 					animate = 0;
 					selected = 11;
 				}
 				break;
 			case 1: //bat
 				glRotatef(90, 0, 0, 1);
-				if (animate) selected++;
-				tdisplay(player_bat, 3.5, px[1], py[1], 7	, selected/3);
-				if (selected == 20) {
+				if (animate) selected += slowmo;
+				tdisplay(player_bat, 3.5, px[1], py[1], 7, int(selected) / 8);
+				if (selected >= 55) {
 					animate = 0;
 				}
 				break;
 			case 2: //pistol
-				if (animate) selected++;
-				tdisplay(player_pistol, 3.5, px[2], py[2], 2, !selected);
-				if (selected == 6) {
+				if (animate) selected += slowmo;
+				tdisplay(player_pistol, 3.5, px[2], py[2], 2, !int(selected));
+				if (selected >= 6) {
 					animate = 0;
 					selected = 0;
 				}
 				break;
 			case 3: //smg
-				if (animate) selected++;
-				tdisplay(player_smg, 3.5, px[3], py[3], 2, !selected);
-				if (selected == 5) {
+				if (animate) selected += slowmo;
+				tdisplay(player_smg, 3.5, px[3], py[3], 2, !int(selected));
+				if (selected >= 5) {
 					animate = 0;
 					selected = 0;
 				}
 				break;
 			case 4: //shutgon
-				if (animate) selected++;
-				tdisplay(player_shutgun, 3.5, px[4], py[4], 5, selected / 2);
-				if (selected == 9) {
+				if (animate) selected += slowmo;
+				tdisplay(player_shutgun, 3.5, px[4], py[4], 5, int(selected) / 2);
+				if (selected >= 9) {
 					animate = 0;
 					selected = 0;
 				}
 				break;
 			default:
-				if (animate) selected++;
-				tdisplay(player_pistol, 3.5, px[2], py[2], 2, !selected);
-				if (selected == 6) {
+				if (animate) selected += slowmo;
+				tdisplay(player_pistol, 3.5, px[2], py[2], 2, !int(selected));
+				if (selected >= 6) {
 					animate = 0;
 					selected = 0;
 				}
@@ -404,9 +405,12 @@ public:
 
 		glPopMatrix();
 
-		if (pweapon.cooldown >= 1)
-			pweapon.cooldown -= 1 * slowmo*!ispaused;
+		if (pweapon.cooldown >= 1) 
+			pweapon.cooldown -= 1 * slowmo * !ispaused;
 		else pweapon.cooldown = 0;
+		if (nocooldown && pweapon.cooldown>5) {
+			pweapon.cooldown = 5;
+		}
 	}
 	void move() {
 		float x = 0, y = 0, maxvelo = 12;
@@ -461,6 +465,7 @@ public:
 		hitboxes.push_back(shape(temp));
 	}
 	void shoot() {
+
 		if (left_click && pweapon.cooldown < 1) {
 			if (pweapon.type == 1 && !animate) selected = 0;
 			animate = true;
@@ -490,7 +495,7 @@ public:
 	void reset() {
 		*this = player(pweapon.type);
 		this->init();
-
+		slowmoframes = slowmomax;
 	}
 	bool playerinrangeofdrops(weapondrop &d) {
 		if ((d.posx - posx) * (d.posx - posx) + (d.posy - posy) * (d.posy - posy) <= 250*250) return true;
@@ -503,7 +508,7 @@ public:
 				pweapon = weapon(i.weapontype, 0);
 				selected = 0;
 				if (pweapon.type == 1)//bat
-					selected = 20;
+					selected = 55;
 
 				if (pweapon.type == 0)//fist
 					selected = 11;
@@ -519,8 +524,8 @@ public:
 		if (keys[4]) {
 			if (slowmoframes && !stopslowmo) {
 				slowmo = 0.1;
+				if(!infslowmo)
 				slowmoframes--;
-				cout << slowmoframes << endl;
 			}
 			else {
 				slowmo += (1 - slowmo) * 0.05;
@@ -566,8 +571,8 @@ struct crosshair {
 GLuint enemy_bat, enemy_pistol, enemy_smg, enemy_shutgun;
 class enemy :public entity {
 public:
-	int  animate = 0, selected = 0;
-	float velo = 5.f;
+	int  animate = 0;
+	float velo = 5.f, selected = 0.f;
 	bool alive = true;
 	static int x[5], y[5];
 	weapon eweapon;
@@ -618,7 +623,6 @@ public:
 	}
 	void draw() {
 		// alive
-			drawfromhitbox(temp);
 			glPushMatrix();
 			glTranslatef(posx, posy, 0);
 			glRotatef(rot+90, 0, 0, 1.0f);
@@ -626,42 +630,42 @@ public:
 			{
 			case 1: //bat
 				glRotatef(90, 0, 0, 1);
-				if (animate) selected++;
-				tdisplay(enemy_bat, 3.5, x[1], y[1], 8, selected / 3);
-				if (selected == 23) {
+				if (animate) selected += slowmo;
+				tdisplay(enemy_bat, 3.5, x[1], y[1], 8, int(selected) / 8);
+				if (selected >= 63) {
 					animate = 0;
 					selected = 0;
 				}
 				break;
 			case 2: //pistol
-				if (animate) selected++;
-				tdisplay(enemy_pistol, 3.5, x[2], y[2], 3, bool(selected));
-				if (selected == 6) {
+				if (animate) selected += slowmo;
+				tdisplay(enemy_pistol, 3.5, x[2], y[2], 3, bool(int(selected)));
+				if (selected >= 6) {
 					animate = 0;
 					selected = 0;
 				}
 				break;
 			case 3: //smg
-				if (animate) selected++;
-				tdisplay(enemy_smg, 3.5, x[3], y[3], 2, !selected);
-				if (selected == 7) {
+				if (animate) selected += slowmo;
+				tdisplay(enemy_smg, 3.5, x[3], y[3], 2, !int(selected));
+				if (selected >= 7) {
 					animate = 0;
 					selected = 0;
 				}
 				break;
 			case 4: //shutgon
-				if (animate) selected++;
-				tdisplay(enemy_shutgun, 3.5, x[4], y[4], 7, selected / 6);
-				if (selected == 41) {
+				if (animate) selected += slowmo;
+				tdisplay(enemy_shutgun, 3.5, x[4], y[4], 7, int(selected) / 6);
+				if (selected >= 41) {
 					animate = 0;
 					selected = 0;
 
 				}
 				break;
 			default:
-				if (animate) selected++;
-				tdisplay(player_pistol, 3.5, x[2], y[2], 2, !selected);
-				if (selected == 6) {
+				if (animate) selected += slowmo;
+				tdisplay(player_pistol, 3.5, x[2], y[2], 2, !int(selected));
+				if (selected >= 6) {
 					animate = 0;
 					selected = 0;
 				}
@@ -713,6 +717,7 @@ public:
 				eweapon.swing(posx, posy, rot-180);
 				if (!eweapon.weaponhitbox.vertices.empty()) {
 					for (auto& i : p1.hitboxes) {
+						if(!invulnerability)
 						if (i.check(eweapon.weaponhitbox)) { p1.rot = rot - 90; p1.gameover = 1; dselected = rand() % 9; }
 					}
 				}

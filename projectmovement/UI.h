@@ -31,8 +31,10 @@ public:
 	vector<GLubyte> colors;
 	string text,textcolor;
 	int fontsize;
-	Buttonitem(float sizex, float sizey, float posx, float posy, function<void()> Buttonfunc, string text = "", int fontsize=64, string color = "#FFFFFF", string textcolor = "#000000") :sizex(sizex), sizey(sizey), posx(posx), posy(posy), Buttonfunc(Buttonfunc), text(text), textcolor(textcolor),fontsize(fontsize) {
+	bool toggleable=0,toggled=0;
+	Buttonitem(float sizex, float sizey, float posx, float posy,bool toggleable, function<void()> Buttonfunc, string text = "", int fontsize=64, string color = "#FFFFFF", string textcolor = "#000000") :sizex(sizex), sizey(sizey), posx(posx), posy(posy), Buttonfunc(Buttonfunc), text(text), textcolor(textcolor),fontsize(fontsize) {
 		colors = hextorgb(color);
+		this->toggleable = toggleable;
 	}
 	void hover() {
 		if ((mousex >= posx - sizex / 2 && mousex <= posx + sizex / 2) && (mousey >= posy - sizey / 2 && mousey <= posy + sizey / 2)) {
@@ -47,6 +49,10 @@ public:
 	void onClick() {
 		if (left_click && ishover) {
 			Buttonfunc();
+			if (toggleable) toggled = !toggled; 
+			left_click = 0;
+			cross.hover = false;
+
 		}
 	}
 	void draw() {
@@ -58,17 +64,33 @@ public:
 			glPopMatrix();
 			return;
 		}
-		glPushMatrix();
-		glColor3ubv(colors.data());
-		glTranslatef(posx, posy, 0);
-		glBegin(GL_QUADS);
-		glVertex2d(-sizex / 2, -sizey / 2);
-		glVertex2d(-sizex / 2, sizey / 2);
-		glVertex2d(sizex / 2, sizey / 2);
-		glVertex2d(sizex / 2, -sizey / 2);
-		glEnd();
-		renderCenteredText(text, 0, -30, fontsize, textcolor);
-		glPopMatrix();
+		if (toggleable) {
+			glPushMatrix();
+			glTranslatef(posx, posy, 0);
+			if (!toggled) { glColor3f(1, 1, 1); }
+			else glColor3f(0.929, 0.929, 0);
+			glBegin(GL_QUADS);
+			glVertex2d(-sizex / 2, -sizey / 2);
+			glVertex2d(-sizex / 2, sizey / 2);
+			glVertex2d(sizex / 2, sizey / 2);
+			glVertex2d(sizex / 2, -sizey / 2);
+			glEnd();
+			renderText(text + (toggled ? " On" : " Off"), sizex / 2, -20, fontsize, "FFFFFF");
+			glPopMatrix();
+		}
+		else {
+			glPushMatrix();
+			glColor3ubv(colors.data());
+			glTranslatef(posx, posy, 0);
+			glBegin(GL_QUADS);
+			glVertex2d(-sizex / 2, -sizey / 2);
+			glVertex2d(-sizex / 2, sizey / 2);
+			glVertex2d(sizex / 2, sizey / 2);
+			glVertex2d(sizex / 2, -sizey / 2);
+			glEnd();
+			renderCenteredText(text, 0, -20, fontsize, textcolor);
+			glPopMatrix();
+		}
 
 	}
 };
@@ -157,23 +179,30 @@ public:
 		glBegin(GL_QUADS);
 		glVertex2f(0, sizey / 2);
 		glVertex2f(0, -sizey / 2);
-		glVertex2f(sizex/2*ratio, -sizey / 2);
-		glVertex2f(sizex/2*ratio, sizey / 2);
+		glVertex2f(sizex*ratio, -sizey / 2);
+		glVertex2f(sizex*ratio, sizey / 2);
 		glEnd();
 		glPopMatrix();
 	}
 };
-Buttonitem retrybutton(400, 200, 1000, -1000, [&]() {resetgame(); left_click = 0; }, "retry");
-Buttonitem startbutton(500, 200, 0, 150, [&]() {currentscreen = 1; left_click = 0; previousscreen = stack<int>();  playMusic(1); }, "Play");
-Buttonitem settingsbutton(500, 200, 0, -150, [&]() {previousscreen.push(currentscreen); currentscreen = 2; left_click = 0; }, "Settings");
-Buttonitem exitbutton(500, 200, 0, -450, [&]() { quitter(); }, "Exit");
-Buttonitem backbutton(200, 200, -1050, 1050, [&]() {
+Buttonitem retrybutton(400, 200, 1000, -1000, 0, [&]() {resetgame(); }, "retry");
+Buttonitem startbutton(500, 200, 0, 150, 0, [&]() {currentscreen = 1; previousscreen = stack<int>();  playMusic(1); resetgame(); }, "Play");
+Buttonitem settingsbutton(500, 200, 0, -150,0, [&]() {previousscreen.push(currentscreen); currentscreen = 2; }, "Settings");
+Buttonitem exitbutton(500, 200, 0, -450,0, [&]() { quitter(); }, "Exit");
+Buttonitem backbutton(200, 200, -1050, 1050,0, [&]() {
 	if (!previousscreen.empty()) {
 		currentscreen = previousscreen.top();
 		previousscreen.pop();
 	}},"<");
-Bar masterAudioBar(0,0, 100, 400, 100, 100, 1.1);
-Bar sfxBar(1,-250, -50, 400, 100, 100, 1.1);
-Bar musicBar(2,250, -50, 400, 100, 100, 1.1);
-Bar slowmoBar(-1, 700, -1100, 500, 50);
-Bar cooldownBar(-1, -700, -1100, 500, 50);
+Buttonitem cheatsbutton(500, 200, 850, -1000,0, [&]() {previousscreen.push(currentscreen); currentscreen = 3; },"Cheats");
+Buttonitem invulnerabilitybutton(100, 100, -800, 600, 1, [&] {invulnerability = !invulnerability; }, "Invulnerability:");
+Buttonitem infslowmobutton(100, 100, -800, 400, 1, [&] {infslowmo = !infslowmo; }, "Infinite slow motion:");
+Buttonitem nocooldownbutton(100, 100, -800, 200, 1, [&] {nocooldown = !nocooldown; }, "No Cooldown:");
+Buttonitem weapon5button(100, 100, -800, 0, 1, [&] {weapon5 = !weapon5; }, "Secret Weapon:");
+
+Bar masterAudioBar(0,100, 400, 600, 100, 100, 1.1);
+Bar sfxBar(1,100, 250, 600, 100, 100, 1.1);
+Bar musicBar(2,100, 100, 600, 100, 100, 1.1);
+
+Bar slowmoBar(-1, 600, -1100, 500, 50);
+Bar cooldownBar(-1, -1100, -1100, 500, 50);

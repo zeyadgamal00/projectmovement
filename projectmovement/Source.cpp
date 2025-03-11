@@ -39,10 +39,13 @@ void wavehandler();
 int wavetransition();
 void game();
 void settings();
+void cheatscreen();
 void screenhandler();
 void mouseclick(int, int, int, int);
 void OnKey(unsigned char, int, int);
 void OnKeyUp(unsigned char, int, int);
+void OnSpecial(int, int, int);
+void OnSpecialUp(int, int, int);
 void mousefunc(int, int);
 void quitter();
 ////////////////////////////////////////////////////////////////////////////////////
@@ -90,6 +93,8 @@ void InitGraphics(int argc, char* argv[]) {
 	// here is the setting of the key function
 	glutKeyboardFunc(OnKey);
 	glutKeyboardUpFunc(OnKeyUp);
+	glutSpecialFunc(OnSpecial);
+	glutSpecialUpFunc(OnSpecialUp);
 	glutSetCursor(GLUT_CURSOR_NONE);
 	SetTransformations();
 	glutPassiveMotionFunc(mousefunc);
@@ -150,6 +155,9 @@ void screenhandler() {
 	case 2:
 		settings();
 		break;
+	case 3:
+		cheatscreen();
+		break;
 	default:
 		break;
 	}
@@ -172,17 +180,24 @@ void mainmenu() {
 void settings() {
 	glClearColor(0.1, 0.1, 0.11, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glPushMatrix();
-
 	backbutton.draw();
 	backbutton.hover();
 	backbutton.onClick();
+	renderCenteredText("Master Volume:", -580, 370, 64, "#FFFFFF");
 	masterAudioBar.drag();
 	masterAudioBar.draw();
+	renderCenteredText("Sfx Volume:", -500, 220, 64, "#FFFFFF");
 	sfxBar.drag();
 	sfxBar.draw();
+	renderCenteredText("Music Volume:", -530, 70, 64, "#FFFFFF");
 	musicBar.drag();
 	musicBar.draw();
+	renderCenteredText(to_string(int(masterVolume * 100)) + "%", 550, 370, 64, "#FFFFFF");
+	renderCenteredText(to_string(int(sfxVolume * 100)) + "%", 550, 220, 64, "#FFFFFF");
+	renderCenteredText(to_string(int(musicVolume * 100)) + "%", 550, 70, 64, "#FFFFFF");
+	cheatsbutton.draw();
+	cheatsbutton.hover();
+	cheatsbutton.onClick();
 	cross.draw();
 	glutSwapBuffers();
 }
@@ -200,7 +215,7 @@ void camera_hover() {
 
 	ydis += ydir;
 
-	glTranslatef(-p1.posx + xdis, -p1.posy + ydis, 0.0f);
+
 
 }
 void resetgame() {
@@ -217,6 +232,7 @@ void resetgame() {
 void paused() {
 	glPushMatrix();
 	camera_hover();
+	glTranslatef(-p1.posx + xdis, -p1.posy + ydis, 0.0f);
 	p1.draw();
 	for (auto& i : enemybuffer)i.draw();
 
@@ -245,14 +261,15 @@ void game() {
 		glClearColor(0.5, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
 		background(p1.posx - xdis, p1.posy - ydis);
+		paused();
 		retrybutton.draw();
 		retrybutton.hover();
 		retrybutton.onClick();
-		glPushMatrix();
 		if (keys[4]) {
 			resetgame();
 		}
-		paused();
+		renderCenteredText("WASTED", 0, 20, 128, "94241c");
+
 	}
 	else if(!ispaused){
 		if(cross.hover) cross.hover = false;
@@ -289,7 +306,7 @@ void game() {
 		if (!i.unneeded(p1)) {
 			next.push_back(i);
 
-			if (i.type == 1) {
+			if (i.type == 1 && !invulnerability) {
 				if (p1.collision(i)) {
 					p1.rot = i.rot - 90;
 					p1.gameover = 1;
@@ -340,16 +357,19 @@ void game() {
 		}
 		p1.draw();
 		glPopMatrix();
+		if(!nocooldown)
 		cooldownBar.specialdraw(1.f - p1.pweapon.cooldown / p1.pweapon.basecooldown, 0.192, 0.208, 0.231);
+		if(!infslowmo)
 		slowmoBar.specialdraw(static_cast<float>(slowmoframes/slowmomax), 0.145, 0.51, 0.871);
 	}
-	else {
+	else if(ispaused){
+		
+		background(p1.posx, p1.posy);
 		paused();
-
 		settingsbutton.draw();
 		settingsbutton.hover();
 		settingsbutton.onClick();
-		renderCenteredText("Paused..", 0, 0, 128, "#FFFFFF");
+		renderCenteredText(" Paused..", 0, 20, 128, "#FFFFFF");
 	}
 	cross.draw();
 	glutSwapBuffers();
@@ -358,11 +378,16 @@ void game() {
 void OnKey(unsigned char key, int x, int y) {
 	switch (key)
 	{
+	case 'W':
 	case 'w': keys[0] = 1; break;
+	case 'A':
 	case 'a':keys[1] = 1; break;
+	case 'S':
 	case 's':keys[2] = 1; break;
+	case 'D':
 	case 'd':keys[3] = 1; break;
-	case 32: if (slowmoframes) keys[4] = 1; else keys[4] = 0; break;
+	case 32: keys[4] = 1; break;
+	case 'E':
 	case 'e': keys[5] = 1; break;
 
 	default:
@@ -372,13 +397,40 @@ void OnKey(unsigned char key, int x, int y) {
 void OnKeyUp(unsigned char key, int x, int y) {
 	switch (key)
 	{
+	case 'W':
 	case 'w': keys[0] = 0; break;
+	case 'A':
 	case 'a':keys[1] = 0; break;
+	case 'S':
 	case 's':keys[2] = 0; break;
+	case 'D':
 	case 'd':keys[3] = 0; break;
 	case 32: keys[4] = 0; break;
+	case 'E':
 	case 'e': keys[5] = 0; break;
-	case 27: ispaused = !ispaused; break;
+	case 27: if (currentscreen == 1)ispaused = !ispaused; else if (!previousscreen.empty()) { currentscreen = previousscreen.top(); previousscreen.pop(); } break;
+	default:
+		break;
+	}
+}
+void OnSpecial(int key, int x, int y) {
+	switch (key)
+	{
+	case GLUT_KEY_UP: keys[0] = 1; break;
+	case GLUT_KEY_LEFT:keys[1] = 1; break;
+	case GLUT_KEY_DOWN:keys[2] = 1; break;
+	case GLUT_KEY_RIGHT:keys[3] = 1; break;
+	default:
+		break;
+	}
+}
+void OnSpecialUp( int key, int x, int y) {
+	switch (key)
+	{
+	case GLUT_KEY_UP: keys[0] = 0; break;
+	case GLUT_KEY_LEFT:keys[1] = 0; break;
+	case GLUT_KEY_DOWN:keys[2] = 0; break;
+	case GLUT_KEY_RIGHT:keys[3] = 0; break;
 	default:
 		break;
 	}
@@ -404,7 +456,9 @@ void wavehandler() {
 	if (enemycount != 0) {
 		auto spawn_interval = chrono::seconds(2);
 		if (last - last_spawn >= spawn_interval) {
-			spawnEnemy();
+			for (int i = 0; i < (wave / 10)+1; i++) {
+				spawnEnemy();
+			}
 			last_spawn = last;
 			enemycount--;
 		}
@@ -453,4 +507,27 @@ void quitter() {
 	FT_Done_Face(face);
 	FT_Done_FreeType(ft);
 	exit(0);
+}
+void cheatscreen() {
+	glClearColor(0.1, 0.1, 0.11, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	renderCenteredText(" Game too hard?", 0, 1000, 80, "#FFFFFF");
+	backbutton.draw();
+	backbutton.hover();
+	backbutton.onClick();
+	invulnerabilitybutton.draw();
+	invulnerabilitybutton.hover();
+	invulnerabilitybutton.onClick();
+	infslowmobutton.draw();
+	infslowmobutton.hover();
+	infslowmobutton.onClick();
+	nocooldownbutton.draw();
+	nocooldownbutton.hover();
+	nocooldownbutton.onClick();
+	weapon5button.draw();
+	weapon5button.hover();
+	weapon5button.onClick();
+
+	cross.draw();
+	glutSwapBuffers();
 }
